@@ -6,7 +6,7 @@ import datetime
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
-import matplotlib.dates as mdates # X축 시간 포맷팅을 위해 추가
+import matplotlib.dates as mdates # X축 시간 포맷팅
 
 plt.rcParams['font.family'] ='Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] =False
