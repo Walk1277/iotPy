@@ -6,7 +6,23 @@ import datetime
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
-import matplotlib.dates as mdates # X축 시간 포맷팅
+import matplotlib.dates as mdates # X축 시간 포맷팅을 위해 추가
+
+# Raspberry Pi GPIO 사용을 위한 임포트 (PC 환경에서는 에러 방지를 위해 try-except 사용)
+try:
+    import RPi.GPIO as GPIO
+    IS_RPI = True
+except ImportError:
+    IS_RPI = False
+    print("RPi.GPIO 라이브러리를 찾을 수 없습니다. 스피커 알람 기능은 비활성화됩니다.")
+
+# --- GPIO 및 스피커 설정 ---
+if IS_RPI:
+    SPEAKER_PIN = 21
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(SPEAKER_PIN, GPIO.OUT)
+    # pwm 객체는 process_webcam에서 초기화하여 전역 변수 충돌을 피합니다.
+    pwm = None
 
 plt.rcParams['font.family'] ='Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] =False
@@ -42,6 +58,35 @@ def log_event(event_type: str):
         print(f"[LOG] {event_type} recorded.")
     except IOError as e:
         print(f"Error writing to log file {LOG_FILE}: {e}")
+
+def start_alarm_speaker(pwm_obj):
+    """
+    졸음 감지 시 스피커 알람을 시작합니다.
+    """
+    if not IS_RPI or not pwm_obj:
+        return
+
+    # 이미 켜져 있지 않다면 시작 (중복 실행 방지)
+    if not getattr(pwm_obj, 'started', False):
+        print("[ALARM] Speaker ON: Drowsiness Detected!")
+        pwm_obj.start(50)  # 듀티 사이클 50%로 시작
+        pwm_obj.started = True
+    else:
+        # 알람이 켜져 있는 상태에서 주파수 변경으로 경고 효과
+        pwm_obj.ChangeFrequency(880 if pwm_obj.start_frequency == 440 else 440)
+        pwm_obj.start_frequency = pwm_obj.get_frequency()
+
+def stop_alarm_speaker(pwm_obj):
+    """
+    졸음 상태 해제 시 스피커 알람을 멈춥니다.
+    """
+    if not IS_RPI or not pwm_obj:
+        return
+
+    if getattr(pwm_obj, 'started', False):
+        print("[ALARM] Speaker OFF: Alertness Restored.")
+        pwm_obj.stop()
+        pwm_obj.started = False
 
 def get_driving_data():
     """로그 파일을 읽어 데이터프레임으로 반환합니다."""
@@ -293,6 +338,13 @@ def process_webcam(webcam_index=0):
     # 프로그램 시작 이벤트 로깅
     log_event("프로그램 시작")
 
+    pwm_speaker = None
+    if IS_RPI:
+        # 440Hz = 라(A) 음으로 초기화
+        pwm_speaker = GPIO.PWM(SPEAKER_PIN, 440)
+        pwm_speaker.start_frequency = 440
+        pwm_speaker.started = False # 알람 상태 추적 플래그
+
     # --- 상태 변수 초기화 ---
     counter = 0        # 눈 감은 상태 지속 프레임 카운터
     alarm_on = False   # 현재 프레임에서 경고 상태
@@ -310,6 +362,7 @@ def process_webcam(webcam_index=0):
 
     while True:
         ret, frame = cap.read()
+
         if not ret:
             print("프레임을 읽을 수 없습니다. 종료합니다.")
             break
@@ -349,10 +402,13 @@ def process_webcam(webcam_index=0):
 
 
             # 졸음 상태에 진입했을 때 (False -> True 전환) 한 번만 로깅 (디바운싱)
-            if alarm_on and not prev_alarm_on:
-                log_event("졸음운전")
+            if alarm_on:
+                if not prev_alarm_on:
+                    log_event("졸음운전")
+                start_alarm_speaker(pwm_speaker)
 
-            # 2. 주석 달기 (Annotation)
+            elif prev_alarm_on:
+                stop_alarm_speaker(pwm_speaker)
 
             # EAR 값 표시
             plot_text(frame, f"EAR: {EAR:.2f}", (10, 30), (0, 255, 0))
