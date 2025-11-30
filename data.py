@@ -11,10 +11,16 @@ import matplotlib.dates as mdates # X축 시간 포맷팅을 위해 추가
 # Raspberry Pi GPIO 사용을 위한 임포트 (PC 환경에서는 에러 방지를 위해 try-except 사용)
 try:
     import RPi.GPIO as GPIO
+    import board # ADXL345
+    import busio # ADXL345
+    import adafruit_adxl34x # ADXL345
+    from picamera2 import Picamera2
+    from libcamera import controls # PiCamera2의 AF/AE 제어용
+
     IS_RPI = True
 except ImportError:
     IS_RPI = False
-    print("RPi.GPIO 라이브러리를 찾을 수 없습니다. 스피커 알람 기능은 비활성화됩니다.")
+    print("RPi.GPIO 또는 ADXL345 라이브러리를 찾을 수 없습니다. 스피커/센서 기능은 비활성화됩니다.")
 
 # --- GPIO 및 스피커 설정 ---
 if IS_RPI:
@@ -39,6 +45,9 @@ chosen_right_eye_idxs = [33,  160, 158, 133, 153, 144]
 # --- 졸음 감지 임계값 및 상태 변수 ---
 EAR_THRESHOLD = 0.20  # 눈을 감았다고 판단하는 EAR 임계값
 CONSEC_FRAMES = 90    # 눈을 감은 상태가 지속되어야 하는 최소 프레임 수 (약 3초)
+# --- 가속도 센서 임계값 (m/s^2) ---
+# 일반적으로 급가속/급정거는 9.8m/s^2 (1G)의 0.4G ~ 0.5G 이상으로 설정
+ACCEL_THRESHOLD = 4.0 # 전/후방 가속도(|X| 또는 |Y|) 감지 임계값.
 
 # --- 로깅 설정 ---
 LOG_FILE = "driving_events.log" # 이벤트 로그 파일 경로
@@ -60,9 +69,6 @@ def log_event(event_type: str):
         print(f"Error writing to log file {LOG_FILE}: {e}")
 
 def start_alarm_speaker(pwm_obj):
-    """
-    졸음 감지 시 스피커 알람을 시작합니다.
-    """
     if not IS_RPI or not pwm_obj:
         return
 
@@ -77,9 +83,6 @@ def start_alarm_speaker(pwm_obj):
         pwm_obj.start_frequency = pwm_obj.get_frequency()
 
 def stop_alarm_speaker(pwm_obj):
-    """
-    졸음 상태 해제 시 스피커 알람을 멈춥니다.
-    """
     if not IS_RPI or not pwm_obj:
         return
 
@@ -111,9 +114,6 @@ def get_driving_data():
 
 
 def show_daily_timeline_visualization():
-    """
-    로그 파일을 읽어 Matplotlib을 사용하여 별도의 창에 오늘의 일일 타임라인 시각화 결과를 표시합니다.
-    """
     df = get_driving_data()
     if df.empty:
         return
@@ -322,33 +322,83 @@ def plot_text(image, text, origin,
 
 
 def process_webcam(webcam_index=0):
-    """
-    웹캠 영상을 읽어 MediaPipe Face Mesh로 실시간 졸음 감지를 수행합니다.
-    """
-    cap = cv2.VideoCapture(webcam_index)
 
-    if not cap.isOpened():
-        print(f"Error: 웹캠(Index {webcam_index})을 열 수 없습니다.")
-        return
+    # 💡 Picamera2 초기화 💡
+    if IS_RPI:
+        try:
+            picam2 = Picamera2()
 
-    # 웹캠의 해상도 가져오기
-    imgW = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    imgH = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            # 카메라 설정: MediapPipe 성능을 위해 낮은 해상도와 BGR 포맷 지정
+            # libcamera의 기본 프리뷰 설정 사용
+            config = picam2.create_preview_configuration(
+                main={"size": (640, 480), "format": "BGR888"},
+                # 카메라가 여러 개일 경우 Index를 지정할 수 있음: camera={"index": webcam_index}
+            )
+            picam2.configure(config)
+
+            # 자동 노출 및 자동 화이트 밸런스를 끈 다음, 적절한 값으로 고정하여 일관성 유지
+            picam2.set_controls({
+                controls.AwbEnable: False, # 자동 화이트 밸런스 끄기
+                controls.AeEnable: False, # 자동 노출 끄기
+                controls.AnalogueGain: 1.0, # 아날로그 게인 고정 (선택 사항)
+                controls.ExposureValue: 0.0, # 노출 보정 (선택 사항)
+            })
+
+            picam2.start()
+
+            # 해상도 가져오기
+            imgW, imgH = picam2.preview_configuration()["main"]["size"]
+            print(f"PiCamera2 초기화 성공. 해상도: {imgW}x{imgH}")
+
+        except Exception as e:
+            print(f"Error: Picamera2 초기화 실패. PiCamera를 사용할 수 없습니다. {e}")
+            return
+
+    else:
+        # PC 환경일 경우 기존 OpenCV 방식 사용 (경고 메시지 출력)
+        print("Info: PiCamera2 환경이 아니므로, 범용 웹캠(cv2.VideoCapture)을 사용합니다.")
+        cap = cv2.VideoCapture(webcam_index)
+        if not cap.isOpened():
+            print(f"Error: 웹캠(Index {webcam_index})을 열 수 없습니다.")
+            return
+        imgW = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        imgH = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        picam2 = None
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        imgW = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        imgH = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
 
     # 프로그램 시작 이벤트 로깅
     log_event("프로그램 시작")
 
+    # ADXL345 가속도 센서 초기화 (기존 코드 유지)
+    accel = None
+    if IS_RPI:
+        try:
+            i2c = busio.I2C(board.SCL, board.SDA)
+            accel = adafruit_adxl34x.ADXL345(i2c)
+            print("ADXL345 Accelerometer Initialized.")
+        except Exception as e:
+            print(f"Error initializing ADXL345: {e}. Accelerometer features disabled.")
+            accel = None
+
+    # 스피커 PWM 초기화
     pwm_speaker = None
     if IS_RPI:
-        # 440Hz = 라(A) 음으로 초기화
         pwm_speaker = GPIO.PWM(SPEAKER_PIN, 440)
         pwm_speaker.start_frequency = 440
-        pwm_speaker.started = False # 알람 상태 추적 플래그
+        pwm_speaker.started = False
 
-    # --- 상태 변수 초기화 ---
-    counter = 0        # 눈 감은 상태 지속 프레임 카운터
-    alarm_on = False   # 현재 프레임에서 경고 상태
-    prev_alarm_on = False # 이전 프레임의 경고 상태 (로깅 디바운싱용)
+        # --- 상태 변수 초기화 ---
+    counter = 0
+    alarm_on = False
+    prev_alarm_on = False
+
+    # 가속도 감지 상태 표시용 변수
+    accel_event_text = ""
+    accel_event_time = datetime.datetime.now()
 
     # FaceMesh 초기화
     face_mesh = mp_facemesh.FaceMesh(
@@ -358,89 +408,103 @@ def process_webcam(webcam_index=0):
         min_tracking_confidence=0.5,
     )
 
-    print(f"웹캠(Index {webcam_index}) 실시간 졸음 감지 실행 중... 'q', 'd', 'w', 'a', 's' 키 사용 가능")
+    print(f"웹캠/PiCamera 실시간 졸음 감지 실행 중... 'q', 'd', 'w', 'a', 's' 키 사용 가능")
 
     while True:
-        ret, frame = cap.read()
 
-        if not ret:
-            print("프레임을 읽을 수 없습니다. 종료합니다.")
+        if IS_RPI and picam2:
+            # 💡 Picamera2로 프레임 캡처 💡
+            # OpenCV 처리용으로 BGR 포맷의 NumPy 배열을 반환
+            frame = picam2.capture_array()
+        elif not IS_RPI and 'cap' in locals() and cap.isOpened():
+            # PC 환경일 경우 기존 OpenCV read 사용
+            ret, frame = cap.read()
+            if not ret:
+                print("프레임을 읽을 수 없습니다. 종료합니다.")
+                break
+        else:
+            # 카메라를 사용할 수 없는 경우 루프 탈출
             break
 
-        frame.flags.writeable = False
+            # 프레임은 이미 BGR 포맷의 NumPy 배열이므로, 추가 변환 없이 사용
+        # frame.flags.writeable = False (Picamera2에서는 불필요)
+
+        # Mediapipe 처리를 위해 BGR -> RGB 변환 (MediaPipe는 RGB를 기대함)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         results = face_mesh.process(frame_rgb)
 
-        frame.flags.writeable = True
+        # frame.flags.writeable = True (Picamera2에서는 불필요)
 
-        # --- 졸음 감지 및 로깅 로직 ---
-        prev_alarm_on = alarm_on # 현재 상태를 저장하여 다음 루프에서 이전 상태로 사용
-        alarm_on = False # 현재 상태 초기화
+        # --- 졸음 감지 및 스피커 제어 로직 ---
+        prev_alarm_on = alarm_on
+        alarm_on = False
 
-        # 탐지 결과가 있을 경우
         if results.multi_face_landmarks:
+
             face_landmarks = results.multi_face_landmarks[0]
             landmarks = face_landmarks.landmark
-
-            # EAR 계산 및 랜드마크 좌표 가져오기
             EAR, (left_lm_coordinates, right_lm_coordinates) = calculate_avg_ear(
-                landmarks,
-                chosen_left_eye_idxs,
-                chosen_right_eye_idxs,
-                imgW,
-                imgH
+                landmarks, chosen_left_eye_idxs, chosen_right_eye_idxs, imgW, imgH
             )
 
             # 1. 졸음 감지 로직
             if EAR < EAR_THRESHOLD:
                 counter += 1
                 if counter >= CONSEC_FRAMES:
-                    alarm_on = True # 졸음 상태 진입
+                    alarm_on = True
             else:
                 counter = 0
 
-
-            # 졸음 상태에 진입했을 때 (False -> True 전환) 한 번만 로깅 (디바운싱)
+            # 2. 졸음 상태 변화에 따른 로깅 및 스피커 제어
             if alarm_on:
                 if not prev_alarm_on:
                     log_event("졸음운전")
                 start_alarm_speaker(pwm_speaker)
-
             elif prev_alarm_on:
                 stop_alarm_speaker(pwm_speaker)
 
-            # EAR 값 표시
+            # 3. EAR 값 및 랜드마크 표시
             plot_text(frame, f"EAR: {EAR:.2f}", (10, 30), (0, 255, 0))
-
-            # 눈 랜드마크 표시
-            lmk_color = (0, 255, 255) # 노란색
+            lmk_color = (0, 255, 255)
             plot_eye_landmarks(frame, left_lm_coordinates, right_lm_coordinates, lmk_color)
 
-            # 3. 경고 메시지 표시 (X 출력)
+            # 4. 경고 메시지 표시 (X 출력)
             if alarm_on:
                 text = "X"
-                (text_width, text_height), baseline = cv2.getTextSize(
-                    text, cv2.FONT_HERSHEY_SIMPLEX, 3.0, 5)
-
+                (text_width, text_height), baseline = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 3.0, 5)
                 center_x = (imgW - text_width) // 2
                 center_y = (imgH + text_height) // 2
-
-                cv2.putText(
-                    frame,
-                    text,
-                    (center_x, center_y),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    3.0,
-                    (0, 0, 255), # 빨간색
-                    5,
-                    cv2.LINE_AA
-                )
+                cv2.putText(frame, text, (center_x, center_y), cv2.FONT_HERSHEY_SIMPLEX, 3.0, (0, 0, 255), 5, cv2.LINE_AA)
         else:
             plot_text(frame, "얼굴을 찾을 수 없습니다.", (10, 30), (0, 0, 255))
 
+        # 💡 ADXL345 가속도 센서 감지 로직 💡
+        if accel:
+            try:
+                x, y, z = accel.acceleration
+
+                # 급가속 감지
+                if x > ACCEL_THRESHOLD:
+                    log_event("급가속(가속도 센서로 확인)")
+                    accel_event_text = f"급가속 감지: {x:.2f} m/s^2"
+                    accel_event_time = datetime.datetime.now()
+                # 급정거 감지
+                elif x < -ACCEL_THRESHOLD:
+                    log_event("급정거(가속도 센서로 확인)")
+                    accel_event_text = f"급정거 감지: {x:.2f} m/s^2"
+                    accel_event_time = datetime.datetime.now()
+
+                # 3초 동안 가속도 이벤트 메시지 표시
+                if (datetime.datetime.now() - accel_event_time).total_seconds() < 3.0 and accel_event_text:
+                    plot_text(frame, accel_event_text, (10, imgH - 30), (0, 255, 255), fntScale=0.7)
+
+            except Exception as e:
+                plot_text(frame, "센서 오류!", (10, imgH - 30), (0, 0, 255))
+
+
         # 화면에 출력
-        cv2.imshow("Real-time Drowsiness Detection (EAR) - [D: Daily Timeline, W: Weekly Stats, A:Accel, S:Brake]", frame)
+        cv2.imshow("Real-time Drowsiness Detection (EAR) - [D: Daily Timeline, W: Weekly Stats, Q: Quit]", frame)
 
         # 키 입력 처리
         key = cv2.waitKey(1) & 0xFF
@@ -448,39 +512,45 @@ def process_webcam(webcam_index=0):
         if key == ord("q"):
             break
         elif key == ord("d"):
-            # 'd' 키를 누르면 Matplotlib 일일 타임라인 시각화 창 띄우기
             show_daily_timeline_visualization()
         elif key == ord("w"):
-            # 'w' 키를 누르면 Matplotlib 주간 통계 시각화 창 띄우기
             show_weekly_event_counts()
         elif key == ord("a"):
-            # 'a' 키를 누르면 급가속 시뮬레이션 및 로깅
             log_event("급가속(가속도 센서로 확인)")
-            # 임시 메시지 표시
-            cv2.putText(frame, "급가속 로깅됨!", (imgW-200, imgH-20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            plot_text(frame, "급가속 로깅됨 (A키)! (센서 기능 분리)", (imgW-350, imgH-20), (0, 255, 255), fntScale=0.7)
         elif key == ord("s"):
-            # 's' 키를 누르면 급정거 시뮬레이션 및 로깅
             log_event("급정거(가속도 센서로 확인)")
-            # 임시 메시지 표시
-            cv2.putText(frame, "급정거 로깅됨!", (imgW-200, imgH-20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            plot_text(frame, "급정거 로깅됨 (S키)! (센서 기능 분리)", (imgW-350, imgH-20), (0, 255, 255), fntScale=0.7)
 
     # 자원 해제
-    log_event("프로그램 종료") # 프로그램 종료 이벤트 로깅
-    cap.release()
+    log_event("프로그램 종료")
+
+    # 💡 Picamera2 종료 💡
+    if IS_RPI and picam2:
+        picam2.stop()
+        print("Picamera2 stopped.")
+    elif 'cap' in locals() and cap.isOpened():
+        cap.release()
+
+    # 스피커 PWM 정지 및 GPIO 해제
+    if IS_RPI:
+        if pwm_speaker and getattr(pwm_speaker, 'started', False):
+            pwm_speaker.stop()
+        GPIO.cleanup()
+        print("GPIO cleanup completed.")
+
     cv2.destroyAllWindows()
-    # FaceMesh 객체 해제
     face_mesh.close()
-    plt.close('all') # Matplotlib 창 닫기
+    plt.close('all')
     print("프로그램이 종료되었습니다.")
 
 @app.command()
 def webcam(
-        index: int = typer.Option(0, help="사용할 웹캠의 인덱스 번호 (기본값 0)"),
+        index: int = typer.Option(0, help="사용할 웹캠/PiCamera의 인덱스 번호 (PiCamera2에서는 보통 무시됨)"),
 ):
-    typer.echo(f"웹캠 실시간 졸음 감지 시작 (Camera Index: {index})...")
+    typer.echo(f"실시간 졸음 감지 시작 (Camera Index: {index})...")
     process_webcam(webcam_index=index)
 
 if __name__ == "__main__":
-    # Matplotlib이 비디오 루프와 독립적으로 작동하도록 미리 interactive 모드를 웁니다.
     plt.ion()
     app()
