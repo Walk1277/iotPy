@@ -1,0 +1,19 @@
+# config.py
+# 모든 상수 정의 (원본 코드의 값 그대로)
+
+EAR_THRESHOLD = 0.20
+CONSEC_FRAMES = 90
+
+ACCEL_THRESHOLD = 4.0
+
+IMPACT_CHECK_DELAY = 10.0
+ALERT_CONFIRM_DELAY = 10.0
+
+LEFT_EYE_IDXS = [362, 385, 387, 263, 373, 380]
+RIGHT_EYE_IDXS = [33, 160, 158, 133, 153, 144]
+
+LOG_FILE = "driving_events.log"
+
+CAM_WIDTH = 1280
+CAM_HEIGHT = 720
+
