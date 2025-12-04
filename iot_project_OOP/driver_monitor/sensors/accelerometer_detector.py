@@ -58,5 +58,4 @@ class AccelerometerDetector:
 
         return event
 
-    # 원본 그대로: impact_check_mode가 2번 반복되는 구조도 유지할 것
 

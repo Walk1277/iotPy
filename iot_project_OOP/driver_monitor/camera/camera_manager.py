@@ -44,7 +44,6 @@ class CameraManager:
 
     def get_frames(self):
         """
-        원본 코드 유지:
         frame = picam2.capture_array()
         frame_rgb = picam2.capture_array()
         """

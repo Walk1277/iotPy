@@ -1,5 +1,4 @@
 # config.py
-# 모든 상수 정의 (원본 코드의 값 그대로)
 
 EAR_THRESHOLD = 0.20
 CONSEC_FRAMES = 90

@@ -16,7 +16,7 @@ from config import (
     ALERT_CONFIRM_DELAY
 )
 
-# 시각화
+# visualization
 from visualization.daily_timeline import show_daily_timeline
 from visualization.weekly_stats import show_weekly_stats
 
@@ -35,16 +35,15 @@ class DriverMonitor:
         self.running = True
 
     def initialize(self):
-        # 카메라 초기화
+      
         self.camera.initialize()
 
-        # ADXL345 초기화 (RPi에서만)
+        # ADXL345
         self.accel.initialize()
 
-        # Speaker 초기화 (RPi에서만)
+        # Speaker
         self.speaker.initialize()
 
-        # 시작 로그
         self.logger.log("Start program")
 
     def impact_response_check_block(self, frame, imgH, face_detected, ear_counter,
@@ -55,14 +54,14 @@ class DriverMonitor:
 
         current_time = datetime.datetime.now()
 
-        # 1) is_unresponsive 판별
+        # 1) is_unresponsive
         is_unresponsive = (ear_counter >= 1) or (not face_detected)
 
         if not is_unresponsive:
             print("[INFO] checked response after impact.")
             return False, None   # impact_mode False, alert_start None
 
-        # 2) impact_time 이후 IMPACT_CHECK_DELAY 초 경과 (alert_start 없음)
+        
         if (current_time - impact_time).total_seconds() >= IMPACT_CHECK_DELAY and alert_start is None:
             print("[ALERT] no response 10s. open alert.")
             cv2.putText(
@@ -76,7 +75,7 @@ class DriverMonitor:
             )
             return True, current_time   # alert_start = current_time
 
-        # 3) alert_start가 존재하고 ALERT_CONFIRM_DELAY초 경과
+     
         if alert_start is not None and (current_time - alert_start).total_seconds() >= ALERT_CONFIRM_DELAY:
             print("no response 20s")
             cv2.putText(
@@ -92,7 +91,7 @@ class DriverMonitor:
             cv2.waitKey(0)
             return False, None   # impact_mode False (break trigger)
 
-        # 4) alert_start가 존재하여, 아직 20초는 안 된 상태
+      
         if alert_start is not None:
             remaining = ALERT_CONFIRM_DELAY - (current_time - alert_start).total_seconds()
             self.overlay.put_text(frame, f"waiting for response: {remaining:.1f}s",
@@ -114,17 +113,16 @@ class DriverMonitor:
 
         self.initialize()
 
-        # 상태 변수 (원본 코드 그대로 유지)
         alarm_on = False
         prev_alarm_on = False
 
-        # EAR 카운트는 fatigue_detector 내부에서 관리됨
-        # impact 모드용 변수
+        # EAR
+        # impac
         impact_check_mode = False
         impact_time = datetime.datetime.min
         alert_start_time = None
 
-        # 가속도 Text
+        # acc Text
         accel_event_text = ""
         accel_event_time = datetime.datetime.now()
 
@@ -133,7 +131,7 @@ class DriverMonitor:
         while self.running:
 
             # =========================================
-            # 1) 카메라 입력 (원본처럼 2회 캡처)
+            # 1)
             # =========================================
             try:
                 frame, frame_rgb = self.camera.get_frames()
@@ -144,7 +142,7 @@ class DriverMonitor:
             imgH, imgW = frame.shape[:2]
 
             # =========================================
-            # 2) FACE + EAR 분석
+            # 2)
             # =========================================
             face_detected, ear, (left_pts, right_pts), alarm_on = \
                 self.fatigue.analyze(frame_rgb, imgW, imgH)
@@ -153,7 +151,7 @@ class DriverMonitor:
             prev_alarm_on = alarm_on
 
             # =========================================
-            # 3) 졸음 알람
+            # 3)
             # =========================================
             if alarm_on:
                 if not prev:
@@ -164,7 +162,7 @@ class DriverMonitor:
                     self.speaker.alarm_off()
 
             # =========================================
-            # 4) EAR 출력 + 랜드마크 출력
+            # 4)
             # =========================================
             if face_detected:
                 frame = self.overlay.put_text(
@@ -190,7 +188,7 @@ class DriverMonitor:
                 frame = self.overlay.put_text(frame, "no face", (10, 30), (0, 0, 255))
 
             # =========================================
-            # 5) 가속도 센서 처리
+            # 5)
             # =========================================
             accel_data = None
             event = None
@@ -207,7 +205,7 @@ class DriverMonitor:
                     impact_time = self.accel.impact_time
                     alert_start_time = self.accel.alert_start_time
 
-                # 최근 이벤트 3초 동안 텍스트 표시
+                # 
                 if (datetime.datetime.now() - accel_event_time).total_seconds() < 3:
                     frame = self.overlay.put_text(
                         frame,
@@ -218,18 +216,18 @@ class DriverMonitor:
                     )
 
             # =====================================================
-            # 6) 원본 코드: impact_check_mode 블록 두 번 실행되는 구조
+            # 6) 
             # =====================================================
             if impact_check_mode:
                 is_unresponsive = (self.fatigue.counter >= 1) or (not face_detected)
 
-                # (1) 정상 반응 → 종료
+       
                 if not is_unresponsive:
                     print("[INFO] pass")
                     impact_check_mode = False
                     alert_start_time = None
                 else:
-                    # 원본과 동일한 구조: delay 체크 후 alert 발생
+                   
                     if (datetime.datetime.now() - impact_time).total_seconds() >= IMPACT_CHECK_DELAY and alert_start_time is None:
                         print("[ALERT] no response 10s. open alert.")
                         cv2.putText(
@@ -271,7 +269,7 @@ class DriverMonitor:
                             1.0, (0, 0, 255), 3
                         )
 
-            # ========== impact_check_mode 두 번째 블록 (원본 코드 그대로) ==========
+            # ========== impact_check_mode ==========
             if impact_check_mode:
                 is_unresponsive = (self.fatigue.counter >= 1) or (not face_detected)
 
@@ -322,7 +320,7 @@ class DriverMonitor:
                     )
 
             # ============================
-            # 7) 키 입력 처리
+            # 7)
             # ============================
             cv2.imshow("Drowsiness Monitor", frame)
             key = cv2.waitKey(1) & 0xFF
@@ -340,7 +338,7 @@ class DriverMonitor:
             elif key == ord("s"):
                 self.logger.log("sudden stop")
 
-        # 종료 처리
+        # end
         self.logger.log("program quit")
         self.camera.release()
         self.speaker.cleanup()

@@ -20,13 +20,13 @@ emergency = EmergencyManager(
     alert_delay=20.0
 )
 
-# 센서 읽기 후
+# after sensor reading
 accel_x = accelerometer.read_x()
 
 if accel_x > THRESHOLD or accel_x < -THRESHOLD:
     emergency.register_impact(accel_x)
 
-# 매 프레임 업데이트
+# frame update
 status = emergency.update(face_detected, ear_low)
 
 if status == "CHECKING_RESPONSE":
