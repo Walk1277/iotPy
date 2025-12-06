@@ -1,5 +1,10 @@
 # accelerometer_detector.py
 import datetime
+import sys
+import os
+
+# Add parent directory to path for config import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 try:
     import board

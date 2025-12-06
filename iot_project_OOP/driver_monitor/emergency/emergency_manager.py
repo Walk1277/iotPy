@@ -1,7 +1,13 @@
 # driver_monitor/emergency/emergency_manager.py
 
 import datetime
-from logging_system.event_logger import log_event
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from driver_monitor.logging_system.event_logger import EventLogger
 
 
 class EmergencyManager:
@@ -12,14 +18,17 @@ class EmergencyManager:
       - 20s full emergency trigger
     """
 
-    def __init__(self, impact_delay=10.0, alert_delay=20.0):
+    def __init__(self, impact_delay=10.0, alert_delay=20.0, logger=None):
         self.impact_delay = impact_delay
         self.alert_delay = alert_delay
 
         self.impact_mode = False     
         self.impact_time = None      
 
-        self.alert_start_time = None 
+        self.alert_start_time = None
+        
+        # Use provided logger or create a new one
+        self.logger = logger if logger is not None else EventLogger()
 
  
     def register_impact(self, accel_value: float):
@@ -30,9 +39,9 @@ class EmergencyManager:
 
        
         if accel_value > 0:
-            log_event("sudden acceleration")
+            self.logger.log("sudden acceleration")
         else:
-            log_event("sudden stop")
+            self.logger.log("sudden stop")
 
         print(f"[Emergency] Impact detected: {accel_value:.2f} m/s^2")
 
@@ -75,7 +84,7 @@ class EmergencyManager:
 
      
             print("[Emergency] No response for 20 seconds → EMERGENCY")
-            log_event("emergency")
+            self.logger.log("emergency")
             self.reset()
             return "EMERGENCY"
 

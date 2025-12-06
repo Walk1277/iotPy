@@ -1,6 +1,12 @@
 # fatigue_detector.py
 import mediapipe as mp
 import cv2
+import sys
+import os
+
+# Add parent directory to path for config import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from config import LEFT_EYE_IDXS, RIGHT_EYE_IDXS, EAR_THRESHOLD, CONSEC_FRAMES
 
 mp_facemesh = mp.solutions.face_mesh

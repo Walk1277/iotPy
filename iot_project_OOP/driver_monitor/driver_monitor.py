@@ -1,15 +1,18 @@
 # driver_monitor.py
 import cv2
 import datetime
-import numpy as np
-import time
+import sys
+import os
 
-from camera_manager import CameraManager
-from fatigue_detector import FatigueDetector
-from accelerometer_detector import AccelerometerDetector
-from speaker_controller import SpeakerController
-from overlay_renderer import OverlayRenderer
-from event_logger import EventLogger
+# Add parent directory to path for config import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from driver_monitor.camera.camera_manager import CameraManager
+from driver_monitor.camera.overlay_renderer import OverlayRenderer
+from driver_monitor.fatigue.fatigue_detector import FatigueDetector
+from driver_monitor.sensors.accelerometer_detector import AccelerometerDetector
+from driver_monitor.sensors.speaker_controller import SpeakerController
+from driver_monitor.logging_system.event_logger import EventLogger
 
 from config import (
     IMPACT_CHECK_DELAY,
@@ -17,8 +20,8 @@ from config import (
 )
 
 # visualization
-from visualization.daily_timeline import show_daily_timeline
-from visualization.weekly_stats import show_weekly_stats
+from driver_monitor.visualization.daily_timeline import show_daily_timeline
+from driver_monitor.visualization.weekly_stats import show_weekly_stats
 
 
 class DriverMonitor:
@@ -45,69 +48,6 @@ class DriverMonitor:
         self.speaker.initialize()
 
         self.logger.log("Start program")
-
-    def impact_response_check_block(self, frame, imgH, face_detected, ear_counter,
-                                    impact_mode, impact_time, alert_start):
-        """
-        ⚠ 원본 코드의 impact_check_mode 블록 구성과 동일하게 유지
-        """
-
-        current_time = datetime.datetime.now()
-
-        # 1) is_unresponsive
-        is_unresponsive = (ear_counter >= 1) or (not face_detected)
-
-        if not is_unresponsive:
-            print("[INFO] checked response after impact.")
-            return False, None   # impact_mode False, alert_start None
-
-        
-        if (current_time - impact_time).total_seconds() >= IMPACT_CHECK_DELAY and alert_start is None:
-            print("[ALERT] no response 10s. open alert.")
-            cv2.putText(
-                frame,
-                "!!! checking user response !!!",
-                (50, imgH // 2 + 50),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1.0,
-                (0, 0, 255),
-                3
-            )
-            return True, current_time   # alert_start = current_time
-
-     
-        if alert_start is not None and (current_time - alert_start).total_seconds() >= ALERT_CONFIRM_DELAY:
-            print("no response 20s")
-            cv2.putText(
-                frame,
-                "!!! (EMERGENCY) !!!",
-                (10, imgH // 2 + 100),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1.5,
-                (0, 0, 255),
-                5
-            )
-            cv2.imshow("Drowsiness Monitor", frame)
-            cv2.waitKey(0)
-            return False, None   # impact_mode False (break trigger)
-
-      
-        if alert_start is not None:
-            remaining = ALERT_CONFIRM_DELAY - (current_time - alert_start).total_seconds()
-            self.overlay.put_text(frame, f"waiting for response: {remaining:.1f}s",
-                                  (10, imgH - 60), (0, 165, 255), scale=1.0)
-            cv2.putText(
-                frame,
-                "!!! waiting for response !!!",
-                (50, imgH // 2 + 50),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1.0,
-                (0, 0, 255),
-                3
-            )
-            return True, alert_start
-
-        return True, alert_start
 
     def run(self):
 
@@ -268,56 +208,6 @@ class DriverMonitor:
                             cv2.FONT_HERSHEY_SIMPLEX,
                             1.0, (0, 0, 255), 3
                         )
-
-            # ========== impact_check_mode ==========
-            if impact_check_mode:
-                is_unresponsive = (self.fatigue.counter >= 1) or (not face_detected)
-
-                if not is_unresponsive:
-                    print("[INFO] checked response after impact.")
-                    impact_check_mode = False
-                    alert_start_time = None
-
-                elif (datetime.datetime.now() - impact_time).total_seconds() >= IMPACT_CHECK_DELAY and alert_start_time is None:
-                    print("[ALERT] no response 10s. open alert.")
-                    cv2.putText(
-                        frame,
-                        "!!! checking user response !!!",
-                        (50, imgH // 2 + 50),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0, (0, 0, 255), 3
-                    )
-                    alert_start_time = datetime.datetime.now()
-
-                elif alert_start_time is not None and (datetime.datetime.now() - alert_start_time).total_seconds() >= ALERT_CONFIRM_DELAY:
-                    print("no response 20s")
-                    cv2.putText(
-                        frame,
-                        "!!! (EMERGENCY) !!!",
-                        (10, imgH // 2 + 100),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.5, (0, 0, 255), 5
-                    )
-                    cv2.imshow("Drowsiness Monitor", frame)
-                    cv2.waitKey(0)
-                    break
-
-                elif alert_start_time is not None:
-                    remaining = ALERT_CONFIRM_DELAY - (datetime.datetime.now() - alert_start_time).total_seconds()
-                    frame = self.overlay.put_text(
-                        frame,
-                        f"waiting for response: {remaining:.1f}s",
-                        (10, imgH - 60),
-                        (0, 165, 255),
-                        scale=1.0
-                    )
-                    cv2.putText(
-                        frame,
-                        "!!! waiting for response !!!",
-                        (50, imgH // 2 + 50),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0, (0, 0, 255), 3
-                    )
 
             # ============================
             # 7)

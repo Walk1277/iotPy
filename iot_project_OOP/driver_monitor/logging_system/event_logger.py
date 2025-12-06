@@ -1,6 +1,12 @@
 # event_logger.py
 import datetime
 import pandas as pd
+import sys
+import os
+
+# Add parent directory to path for config import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from config import LOG_FILE
 
 class EventLogger:

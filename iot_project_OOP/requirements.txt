@@ -1,1 +1,12 @@
+typer>=0.9.0
+opencv-python>=4.8.0
+mediapipe>=0.10.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+numpy>=1.24.0
 
+# Optional: Raspberry Pi specific packages (install separately if needed)
+# picamera2
+# RPi.GPIO
+# adafruit-circuitpython-adxl34x
+# adafruit-blinka
