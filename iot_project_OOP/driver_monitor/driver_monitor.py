@@ -37,7 +37,8 @@ except ImportError:
 # Use absolute import for config at project root
 from config import (
     IMPACT_CHECK_DELAY,
-    ALERT_CONFIRM_DELAY
+    ALERT_CONFIRM_DELAY,
+    EAR_THRESHOLD
 )
 
 
@@ -170,6 +171,10 @@ class DriverMonitor:
                     impact_check_mode = True
                     impact_time = self.accel.impact_time
                     alert_start_time = self.accel.alert_start_time
+                    
+                    # Register impact for report system
+                    if impact_time:
+                        self.report_manager.register_impact(impact_time)
 
                 # 
                 if (datetime.datetime.now() - accel_event_time).total_seconds() < 3:
@@ -185,7 +190,13 @@ class DriverMonitor:
             # 5.5) Report system check (before keyboard input)
             # =========================================
             # Update report manager (initial check without keyboard input)
-            report_status = self.report_manager.update(accel_data, face_detected, None)
+            # Pass EAR and threshold for eyes closed detection
+            report_status = self.report_manager.update(
+                face_detected=face_detected,
+                ear=ear if face_detected else None,
+                ear_threshold=EAR_THRESHOLD,
+                keyboard_input=None
+            )
             
             # Handle report system alerts
             if report_status['status'] == 'ALERT':
@@ -295,7 +306,12 @@ class DriverMonitor:
                 # Any key pressed during alert cancels report
                 keyboard_input = chr(key) if key != 255 and key != 0 else None
                 if keyboard_input:
-                    report_status = self.report_manager.update(accel_data, face_detected, keyboard_input)
+                    report_status = self.report_manager.update(
+                        face_detected=face_detected,
+                        ear=ear if face_detected else None,
+                        ear_threshold=EAR_THRESHOLD,
+                        keyboard_input=keyboard_input
+                    )
                     if report_status['status'] == 'NORMAL':
                         self.speaker.alarm_off()
                         print(f"[Report] User pressed '{keyboard_input}'. Report cancelled.")

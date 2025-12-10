@@ -9,7 +9,8 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from config import (
-    REPORT_ACCEL_THRESHOLD, 
+    REPORT_IMPACT_MONITORING_DURATION,
+    REPORT_EYES_CLOSED_DURATION,
     REPORT_NO_FACE_DURATION, 
     REPORT_RESPONSE_TIMEOUT,
     SMS_API_KEY,
@@ -33,10 +34,12 @@ except ImportError:
 class ReportManager:
     """
     Handles emergency report functionality.
-    Conditions:
-    1. Accelerometer detects 2g or more
-    2. No face detected for 10 seconds
-    3. When both conditions are met, show alert and wait for user response
+    New logic:
+    1. Monitor for 1 minute after last impact
+    2. Within that 1 minute, check if:
+       - Eyes closed (low EAR) for 10+ seconds, OR
+       - No face detected for 10+ seconds
+    3. When condition is met, show alert and wait for user response
     4. If no response within 10 seconds, proceed with report process
     """
 
@@ -66,42 +69,69 @@ class ReportManager:
         
         # State variables
         self.report_mode = False
-        self.accel_triggered = False
-        self.accel_trigger_time = None
-        self.no_face_start_time = None
+        self.last_impact_time = None  # Time of last impact
+        self.eyes_closed_start_time = None  # When eyes closed state started
+        self.no_face_start_time = None  # When no face state started
         self.alert_start_time = None
         self.user_responded = False
         self.sms_sent = False  # Track if SMS has been sent to avoid duplicates
 
-    def check_accelerometer(self, accel_data):
+    def register_impact(self, impact_time):
         """
-        Check if accelerometer detects 2g or more.
+        Register an impact event. This starts the 1-minute monitoring period.
         
         Args:
-            accel_data: Tuple of (x, y, z) acceleration values in m/s^2, or None
+            impact_time: datetime, time when impact occurred
+        """
+        self.last_impact_time = impact_time
+        self.eyes_closed_start_time = None
+        self.no_face_start_time = None
+        self.sms_sent = False  # Reset SMS flag for new impact
+        print(f"[Report] Impact registered at {impact_time.strftime('%H:%M:%S')}. Monitoring for {REPORT_IMPACT_MONITORING_DURATION}s.")
+
+    def is_within_monitoring_period(self):
+        """
+        Check if we are within the 1-minute monitoring period after last impact.
+        
+        Returns:
+            bool: True if within monitoring period
+        """
+        if self.last_impact_time is None:
+            return False
+        
+        elapsed = (datetime.datetime.now() - self.last_impact_time).total_seconds()
+        return elapsed <= REPORT_IMPACT_MONITORING_DURATION
+
+    def check_eyes_closed(self, face_detected, ear, ear_threshold):
+        """
+        Check if eyes are closed (low EAR) for the required duration.
+        
+        Args:
+            face_detected: bool, True if face is detected
+            ear: float, Eye Aspect Ratio value
+            ear_threshold: float, EAR threshold for eyes closed
             
         Returns:
-            bool: True if 2g or more detected
+            bool: True if eyes closed for required duration
         """
-        if accel_data is None:
+        if not face_detected:
+            # If no face, reset eyes closed timer
+            self.eyes_closed_start_time = None
             return False
         
-        x, y, z = accel_data
-        # Calculate magnitude
-        magnitude = (x**2 + y**2 + z**2) ** 0.5
-        
-        if magnitude >= REPORT_ACCEL_THRESHOLD:
-            if not self.accel_triggered:
-                self.accel_triggered = True
-                self.accel_trigger_time = datetime.datetime.now()
-                print(f"[Report] High acceleration detected: {magnitude:.2f} m/s^2 (>= 2g)")
-            return True
+        if ear is not None and ear < ear_threshold:
+            # Eyes are closed (low EAR)
+            if self.eyes_closed_start_time is None:
+                self.eyes_closed_start_time = datetime.datetime.now()
+            
+            elapsed = (datetime.datetime.now() - self.eyes_closed_start_time).total_seconds()
+            if elapsed >= REPORT_EYES_CLOSED_DURATION:
+                return True
         else:
-            # Reset if acceleration drops below threshold
-            if self.accel_triggered:
-                self.accel_triggered = False
-                self.accel_trigger_time = None
-            return False
+            # Eyes are open, reset timer
+            self.eyes_closed_start_time = None
+        
+        return False
 
     def check_no_face(self, face_detected):
         """
@@ -126,13 +156,14 @@ class ReportManager:
         
         return False
 
-    def update(self, accel_data, face_detected, keyboard_input=None):
+    def update(self, face_detected, ear=None, ear_threshold=0.2, keyboard_input=None):
         """
         Update report manager state. Called every frame.
         
         Args:
-            accel_data: Tuple of (x, y, z) acceleration values, or None
             face_detected: bool, True if face is detected
+            ear: float or None, Eye Aspect Ratio value
+            ear_threshold: float, EAR threshold for eyes closed (default 0.2)
             keyboard_input: str or None, keyboard input from user (for current implementation)
             
         Returns:
@@ -143,18 +174,31 @@ class ReportManager:
         """
         now = datetime.datetime.now()
         
-        # Check conditions
-        accel_condition = self.check_accelerometer(accel_data)
+        # Check if we are within monitoring period after last impact
+        if not self.is_within_monitoring_period():
+            # Outside monitoring period, reset states
+            if self.report_mode:
+                self.report_mode = False
+                self.alert_start_time = None
+                self.user_responded = False
+            self.eyes_closed_start_time = None
+            self.no_face_start_time = None
+            return {'status': 'NORMAL', 'message': '', 'remaining_time': 0}
+        
+        # Within monitoring period - check conditions
+        eyes_closed_condition = self.check_eyes_closed(face_detected, ear, ear_threshold)
         no_face_condition = self.check_no_face(face_detected)
         
-        # Both conditions met - enter report mode
-        if accel_condition and no_face_condition and not self.report_mode:
+        # Either condition met - enter report mode
+        if (eyes_closed_condition or no_face_condition) and not self.report_mode:
             self.report_mode = True
             self.alert_start_time = now
             self.user_responded = False
             self.sms_sent = False  # Reset SMS sent flag for new alert
-            self.logger.log("report_alert_triggered")
-            print("[Report] Emergency conditions met! Alert started.")
+            
+            condition_text = "eyes closed" if eyes_closed_condition else "no face detected"
+            self.logger.log(f"report_alert_triggered: {condition_text}")
+            print(f"[Report] Emergency condition met ({condition_text})! Alert started.")
             return {
                 'status': 'ALERT',
                 'message': 'Press any key within 10 seconds to cancel report',
@@ -167,7 +211,7 @@ class ReportManager:
             if keyboard_input is not None:
                 self.user_responded = True
                 self.report_mode = False
-                self.accel_triggered = False
+                self.eyes_closed_start_time = None
                 self.no_face_start_time = None
                 self.alert_start_time = None
                 self.sms_sent = False  # Reset SMS flag
@@ -180,7 +224,7 @@ class ReportManager:
                 if self.input_callback():
                     self.user_responded = True
                     self.report_mode = False
-                    self.accel_triggered = False
+                    self.eyes_closed_start_time = None
                     self.no_face_start_time = None
                     self.alert_start_time = None
                     self.sms_sent = False  # Reset SMS flag
@@ -202,13 +246,13 @@ class ReportManager:
                 else:
                     # Timeout - proceed with report
                     self.report_mode = False
-                    self.accel_triggered = False
+                    self.eyes_closed_start_time = None
                     self.no_face_start_time = None
                     self.alert_start_time = None
                     self.logger.log("report_triggered")
                     
                     # Send SMS report
-                    self._send_sms_report(accel_data)
+                    self._send_sms_report()
                     
                     print("[Report] No response received. Report process initiated.")
                     return {
@@ -218,7 +262,7 @@ class ReportManager:
                     }
         
         # Reset conditions if they are no longer met
-        if not accel_condition or not no_face_condition:
+        if not eyes_closed_condition and not no_face_condition:
             if self.report_mode:
                 self.report_mode = False
                 self.alert_start_time = None
@@ -226,12 +270,9 @@ class ReportManager:
         
         return {'status': 'NORMAL', 'message': '', 'remaining_time': 0}
 
-    def _send_sms_report(self, accel_data=None):
+    def _send_sms_report(self):
         """
         Send SMS report when emergency conditions are met and no response received.
-        
-        Args:
-            accel_data: Tuple of (x, y, z) acceleration values, or None
         """
         if not SMS_ENABLED or not self.sms_service:
             print("[Report] SMS reporting is disabled or service not available.")
@@ -244,23 +285,15 @@ class ReportManager:
         try:
             # Create emergency message
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            impact_time_str = self.last_impact_time.strftime("%H:%M:%S") if self.last_impact_time else "Unknown"
             
-            if accel_data:
-                x, y, z = accel_data
-                magnitude = (x**2 + y**2 + z**2) ** 0.5
-                message_text = (
-                    f"[긴급신고] 운전자 모니터링 시스템\n"
-                    f"시간: {timestamp}\n"
-                    f"상태: 가속도 {magnitude:.2f}m/s² 감지, 얼굴 미감지 10초 초과\n"
-                    f"사용자 응답 없음. 긴급 상황으로 판단되어 신고합니다."
-                )
-            else:
-                message_text = (
-                    f"[긴급신고] 운전자 모니터링 시스템\n"
-                    f"시간: {timestamp}\n"
-                    f"상태: 얼굴 미감지 10초 초과\n"
-                    f"사용자 응답 없음. 긴급 상황으로 판단되어 신고합니다."
-                )
+            message_text = (
+                f"[긴급신고] 운전자 모니터링 시스템\n"
+                f"시간: {timestamp}\n"
+                f"충격 발생: {impact_time_str}\n"
+                f"상태: 충격 후 1분 내 눈 감음 또는 얼굴 미감지 10초 초과\n"
+                f"사용자 응답 없음. 긴급 상황으로 판단되어 신고합니다."
+            )
             
             # Create message object
             message = RequestMessage(
@@ -288,8 +321,8 @@ class ReportManager:
     def reset(self):
         """Reset all state variables."""
         self.report_mode = False
-        self.accel_triggered = False
-        self.accel_trigger_time = None
+        self.last_impact_time = None
+        self.eyes_closed_start_time = None
         self.no_face_start_time = None
         self.alert_start_time = None
         self.user_responded = False

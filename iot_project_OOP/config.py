@@ -17,8 +17,9 @@ CAM_WIDTH = 800
 CAM_HEIGHT = 480
 
 # Report system settings
-REPORT_ACCEL_THRESHOLD = 19.6  # 2g in m/s^2 (2 * 9.8)
-REPORT_NO_FACE_DURATION = 10.0  # seconds
+REPORT_IMPACT_MONITORING_DURATION = 60.0  # Monitor for 1 minute after last impact
+REPORT_EYES_CLOSED_DURATION = 10.0  # seconds of eyes closed (low EAR)
+REPORT_NO_FACE_DURATION = 10.0  # seconds of no face detection
 REPORT_RESPONSE_TIMEOUT = 10.0  # seconds to wait for user response
 
 # SMS report settings (SOLAPI)
