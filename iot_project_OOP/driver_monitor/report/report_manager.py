@@ -43,16 +43,18 @@ class ReportManager:
     4. If no response within 10 seconds, proceed with report process
     """
 
-    def __init__(self, logger=None, input_callback=None):
+    def __init__(self, logger=None, input_callback=None, gps_manager=None):
         """
         Args:
             logger: EventLogger instance (optional)
             input_callback: Callback function for user input (optional)
                            Should return True if user responded, False otherwise
                            This allows future UI integration (touch screen)
+            gps_manager: GPSManager instance (optional) for location tracking
         """
         self.logger = logger if logger is not None else EventLogger()
         self.input_callback = input_callback  # For future UI integration
+        self.gps_manager = gps_manager  # GPS manager for location tracking
         
         # Initialize SMS service if available and enabled
         self.sms_service = None
@@ -287,12 +289,22 @@ class ReportManager:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             impact_time_str = self.last_impact_time.strftime("%H:%M:%S") if self.last_impact_time else "Unknown"
             
+            # Get GPS position if available
+            gps_position_str = "Location unavailable"
+            if self.gps_manager:
+                gps_pos = self.gps_manager.get_position()
+                if gps_pos:
+                    gps_position_str = f"Latitude: {gps_pos[0]:.6f}, Longitude: {gps_pos[1]:.6f}"
+                    # Add Google Maps link
+                    gps_position_str += f"\nMap: https://maps.google.com/?q={gps_pos[0]},{gps_pos[1]}"
+            
             message_text = (
-                f"[긴급신고] 운전자 모니터링 시스템\n"
-                f"시간: {timestamp}\n"
-                f"충격 발생: {impact_time_str}\n"
-                f"상태: 충격 후 1분 내 눈 감음 또는 얼굴 미감지 10초 초과\n"
-                f"사용자 응답 없음. 긴급 상황으로 판단되어 신고합니다."
+                f"[EMERGENCY REPORT] Driver Monitoring System\n"
+                f"Time: {timestamp}\n"
+                f"Impact detected: {impact_time_str}\n"
+                f"Location: {gps_position_str}\n"
+                f"Status: Eyes closed or no face detected for 10+ seconds within 1 minute after impact\n"
+                f"No user response. Emergency situation detected. Reporting now."
             )
             
             # Create message object

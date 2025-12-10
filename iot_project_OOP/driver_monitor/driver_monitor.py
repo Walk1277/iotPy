@@ -18,11 +18,11 @@ try:
     from .fatigue.fatigue_detector import FatigueDetector
     from .sensors.accelerometer_detector import AccelerometerDetector
     from .sensors.speaker_controller import SpeakerController
+    from .sensors.gps_manager import GPSManager
     from .logging_system.event_logger import EventLogger
     from .logging_system.log_parser import LogParser
     from .report.report_manager import ReportManager
-    from .visualization.daily_timeline import show_daily_timeline
-    from .visualization.weekly_stats import show_weekly_stats
+    from .data_bridge import DataBridge
 except ImportError:
     # Absolute import (when executed directly)
     from driver_monitor.camera.camera_manager import CameraManager
@@ -30,18 +30,14 @@ except ImportError:
     from driver_monitor.fatigue.fatigue_detector import FatigueDetector
     from driver_monitor.sensors.accelerometer_detector import AccelerometerDetector
     from driver_monitor.sensors.speaker_controller import SpeakerController
+    from driver_monitor.sensors.gps_manager import GPSManager
     from driver_monitor.logging_system.event_logger import EventLogger
     from driver_monitor.logging_system.log_parser import LogParser
     from driver_monitor.report.report_manager import ReportManager
-    from driver_monitor.visualization.daily_timeline import show_daily_timeline
-    from driver_monitor.visualization.weekly_stats import show_weekly_stats
+    from driver_monitor.data_bridge import DataBridge
 
 # Use absolute import for config at project root
-from config import (
-    IMPACT_CHECK_DELAY,
-    ALERT_CONFIRM_DELAY,
-    EAR_THRESHOLD
-)
+from config import EAR_THRESHOLD
 
 
 class DriverMonitor:
@@ -51,10 +47,12 @@ class DriverMonitor:
         self.camera = CameraManager(cam_index)
         self.fatigue = FatigueDetector()
         self.accel = AccelerometerDetector()
+        self.gps = GPSManager(simulate=True)  # Use simulation mode by default
         self.speaker = SpeakerController()
         self.overlay = OverlayRenderer()
         self.logger = EventLogger()
-        self.report_manager = ReportManager(logger=self.logger)
+        self.report_manager = ReportManager(logger=self.logger, gps_manager=self.gps)
+        self.data_bridge = DataBridge()  # For UI communication
 
         self.running = True
 
@@ -64,6 +62,9 @@ class DriverMonitor:
 
         # ADXL345
         self.accel.initialize()
+
+        # GPS
+        self.gps.initialize()
 
         # Speaker
         self.speaker.initialize()
@@ -77,16 +78,11 @@ class DriverMonitor:
         alarm_on = False
         prev_alarm_on = False
 
-        # Legacy impact check mode (for backward compatibility)
-        impact_check_mode = False
-        impact_time = datetime.datetime.min
-        alert_start_time = None
-
         # Accelerometer event display text
         accel_event_text = ""
         accel_event_time = datetime.datetime.now()
 
-        print("Use 'q', 'd', 'w', 'a', 's' key")
+        print("Press 'q' to quit. UI is available for monitoring.")
 
         while self.running:
 
@@ -116,6 +112,13 @@ class DriverMonitor:
             alarm_on = analyze_result[3]
 
             prev_alarm_on = alarm_on
+            
+            # Update UI data bridge
+            self.data_bridge.update_drowsiness_status(
+                ear=ear if face_detected else None,
+                face_detected=face_detected,
+                alarm_on=alarm_on
+            )
 
             # =========================================
             # 3) Drowsiness alarm handling
@@ -167,12 +170,9 @@ class DriverMonitor:
                     self.logger.log(event)
                     accel_event_text = self.accel.last_event_text
                     accel_event_time = self.accel.last_event_time
-
-                    impact_check_mode = True
-                    impact_time = self.accel.impact_time
-                    alert_start_time = self.accel.alert_start_time
                     
                     # Register impact for report system
+                    impact_time = self.accel.impact_time
                     if impact_time:
                         self.report_manager.register_impact(impact_time)
 
@@ -187,7 +187,15 @@ class DriverMonitor:
                     )
 
             # =========================================
-            # 5.5) Report system check (before keyboard input)
+            # 5.5) GPS reading
+            # =========================================
+            gps_data = self.gps.read_gps()
+            gps_position = None
+            if gps_data:
+                gps_position = (gps_data[0], gps_data[1])  # (latitude, longitude)
+            
+            # =========================================
+            # 5.6) Report system check (before keyboard input)
             # =========================================
             # Update report manager (initial check without keyboard input)
             # Pass EAR and threshold for eyes closed detection
@@ -197,6 +205,24 @@ class DriverMonitor:
                 ear_threshold=EAR_THRESHOLD,
                 keyboard_input=None
             )
+            
+            # Update system status for UI
+            self.data_bridge.update_system_status(
+                accel_data=accel_data,
+                impact_detected=(event is not None),
+                report_status=report_status,
+                gps_position=gps_position,
+                sensor_status=f"Camera: {'OK' if face_detected else 'Waiting'} / Accelerometer: {'OK' if self.accel.accel else 'Waiting'} / GPS: {'OK' if gps_position else 'Waiting'}"
+            )
+            
+            # Update log summary periodically (every 60 frames ~ 2 seconds at 30fps)
+            if hasattr(self, '_frame_count'):
+                self._frame_count += 1
+            else:
+                self._frame_count = 0
+            
+            if self._frame_count % 60 == 0:
+                self.data_bridge.update_log_summary()
             
             # Handle report system alerts
             if report_status['status'] == 'ALERT':
@@ -241,67 +267,13 @@ class DriverMonitor:
                 if report_status.get('was_alerting', False):
                     self.speaker.alarm_off()
 
-            # =====================================================
-            # 6) Impact response check (legacy emergency system)
-            # =====================================================
-            if impact_check_mode:
-                is_unresponsive = (self.fatigue.counter >= 1) or (not face_detected)
-
-       
-                if not is_unresponsive:
-                    print("[INFO] pass")
-                    impact_check_mode = False
-                    alert_start_time = None
-                else:
-                   
-                    if (datetime.datetime.now() - impact_time).total_seconds() >= IMPACT_CHECK_DELAY and alert_start_time is None:
-                        print("[ALERT] no response 10s. open alert.")
-                        cv2.putText(
-                            frame,
-                            "!!! checking user response !!!",
-                            (50, imgH // 2 + 50),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1.0, (0, 0, 255), 3
-                        )
-                        alert_start_time = datetime.datetime.now()
-
-                    elif alert_start_time is not None and (datetime.datetime.now() - alert_start_time).total_seconds() >= ALERT_CONFIRM_DELAY:
-                        print("no response 20s")
-                        cv2.putText(
-                            frame,
-                            "!!! (EMERGENCY) !!!",
-                            (10, imgH // 2 + 100),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1.5, (0, 0, 255), 5
-                        )
-                        cv2.imshow("Drowsiness Monitor", frame)
-                        cv2.waitKey(0)
-                        break
-
-                    elif alert_start_time is not None:
-                        remaining = ALERT_CONFIRM_DELAY - (datetime.datetime.now() - alert_start_time).total_seconds()
-                        frame = self.overlay.put_text(
-                            frame,
-                            f"waiting for response: {remaining:.1f}s",
-                            (10, imgH - 60),
-                            (0, 165, 255),
-                            scale=1.0
-                        )
-                        cv2.putText(
-                            frame,
-                            "!!! waiting for response 10s !!!",
-                            (50, imgH // 2 + 50),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1.0, (0, 0, 255), 3
-                        )
-
             # ============================
-            # 7) Display and keyboard input
+            # 6) Display and keyboard input
             # ============================
             cv2.imshow("Drowsiness Monitor", frame)
             key = cv2.waitKey(1) & 0xFF
 
-            # Handle keyboard input for report system
+            # Handle keyboard input for report system and quit
             if report_status['status'] == 'ALERT' and key != 255 and key != 0:
                 # Any key pressed during alert cancels report
                 keyboard_input = chr(key) if key != 255 and key != 0 else None
@@ -316,18 +288,9 @@ class DriverMonitor:
                         self.speaker.alarm_off()
                         print(f"[Report] User pressed '{keyboard_input}'. Report cancelled.")
 
+            # Quit on 'q' key
             if key == ord("q"):
                 break
-            elif key == ord("d"):
-                df = LogParser.load_log()
-                show_daily_timeline(df)
-            elif key == ord("w"):
-                df = LogParser.load_log()
-                show_weekly_stats(df)
-            elif key == ord("a"):
-                self.logger.log("sudden acceleration")
-            elif key == ord("s"):
-                self.logger.log("sudden stop")
 
         # end
         self.logger.log("program quit")

@@ -5,6 +5,8 @@ pandas>=2.0.0
 matplotlib>=3.7.0
 numpy>=1.24.0,<2.0.0
 solapi>=1.0.0
+pyserial>=3.5
+pynmea2>=1.19.0
 
 # Optional: Raspberry Pi specific packages (install separately if needed)
 # picamera2
