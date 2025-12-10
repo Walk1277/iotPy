@@ -27,7 +27,7 @@ class EmergencyManager:
         self.impact_mode = False     
         self.impact_time = None      
 
-        self.alert_start_time = None
+        self.alert_start_time = None 
         
         # Use provided logger or create a new one
         self.logger = logger if logger is not None else EventLogger()

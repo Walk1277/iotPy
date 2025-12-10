@@ -2,9 +2,18 @@
 
 import pandas as pd
 import datetime
+import sys
+import os
+
+# Add project root to Python path (Raspberry Pi compatibility)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from config import LOG_FILE
 
 class LogParser:
-    LOG_FILE = "driving_events.log"
+    # Use LOG_FILE from config (no need to duplicate)
 
     @staticmethod
     def load_log():
@@ -17,7 +26,7 @@ class LogParser:
 
         try:
             df = pd.read_csv(
-                LogParser.LOG_FILE,
+                LOG_FILE,
                 sep='|',
                 names=['Timestamp', 'EventType'],
                 skipinitialspace=True,

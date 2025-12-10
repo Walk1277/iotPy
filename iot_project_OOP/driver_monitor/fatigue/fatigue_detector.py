@@ -41,7 +41,8 @@ class FatigueDetector:
             P1_P4 = self._distance(pts[0], pts[3])
             ear = (P2_P6 + P3_P5) / (2 * P1_P4)
             return ear, pts
-        except:
+        except (IndexError, TypeError, AttributeError) as e:
+            # Handle cases where landmarks are invalid or missing
             return 0.0, None
 
     def analyze(self, frame_rgb, imgW, imgH):
