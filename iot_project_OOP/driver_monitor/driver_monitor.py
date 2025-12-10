@@ -19,6 +19,7 @@ try:
     from .sensors.accelerometer_detector import AccelerometerDetector
     from .sensors.speaker_controller import SpeakerController
     from .logging_system.event_logger import EventLogger
+    from .logging_system.log_parser import LogParser
     from .report.report_manager import ReportManager
     from .visualization.daily_timeline import show_daily_timeline
     from .visualization.weekly_stats import show_weekly_stats
@@ -30,6 +31,7 @@ except ImportError:
     from driver_monitor.sensors.accelerometer_detector import AccelerometerDetector
     from driver_monitor.sensors.speaker_controller import SpeakerController
     from driver_monitor.logging_system.event_logger import EventLogger
+    from driver_monitor.logging_system.log_parser import LogParser
     from driver_monitor.report.report_manager import ReportManager
     from driver_monitor.visualization.daily_timeline import show_daily_timeline
     from driver_monitor.visualization.weekly_stats import show_weekly_stats
@@ -57,7 +59,7 @@ class DriverMonitor:
         self.running = True
 
     def initialize(self):
-      
+        """Initialize all components."""
         self.camera.initialize()
 
         # ADXL345
@@ -75,13 +77,12 @@ class DriverMonitor:
         alarm_on = False
         prev_alarm_on = False
 
-        # EAR
-        # impac
+        # Legacy impact check mode (for backward compatibility)
         impact_check_mode = False
         impact_time = datetime.datetime.min
         alert_start_time = None
 
-        # acc Text
+        # Accelerometer event display text
         accel_event_text = ""
         accel_event_time = datetime.datetime.now()
 
@@ -90,18 +91,18 @@ class DriverMonitor:
         while self.running:
 
             # =========================================
-            # 1)
+            # 1) Camera frame capture
             # =========================================
             try:
                 frame, frame_rgb = self.camera.get_frames()
-            except:
-                print("Camera read error. Stop.")
+            except (RuntimeError, Exception) as e:
+                print(f"Camera read error: {e}. Stop.")
                 break
 
             imgH, imgW = frame.shape[:2]
 
             # =========================================
-            # 2)
+            # 2) Face and fatigue detection
             # =========================================
             analyze_result = self.fatigue.analyze(frame_rgb, imgW, imgH)
             face_detected = analyze_result[0]
@@ -114,22 +115,21 @@ class DriverMonitor:
                 left_pts, right_pts = None, None
             alarm_on = analyze_result[3]
 
-            prev = prev_alarm_on
             prev_alarm_on = alarm_on
 
             # =========================================
-            # 3)
+            # 3) Drowsiness alarm handling
             # =========================================
             if alarm_on:
-                if not prev:
+                if not prev_alarm_on:
                     self.logger.log("drowsiness")
                 self.speaker.alarm_on()
             else:
-                if prev:
+                if prev_alarm_on:
                     self.speaker.alarm_off()
 
             # =========================================
-            # 4)
+            # 4) Frame overlay rendering
             # =========================================
             if face_detected:
                 frame = self.overlay.put_text(
@@ -176,7 +176,7 @@ class DriverMonitor:
                     if impact_time:
                         self.report_manager.register_impact(impact_time)
 
-                # 
+                # Display accelerometer event text for 3 seconds
                 if (datetime.datetime.now() - accel_event_time).total_seconds() < 3:
                     frame = self.overlay.put_text(
                         frame,
@@ -242,7 +242,7 @@ class DriverMonitor:
                     self.speaker.alarm_off()
 
             # =====================================================
-            # 6) 
+            # 6) Impact response check (legacy emergency system)
             # =====================================================
             if impact_check_mode:
                 is_unresponsive = (self.fatigue.counter >= 1) or (not face_detected)
@@ -319,10 +319,10 @@ class DriverMonitor:
             if key == ord("q"):
                 break
             elif key == ord("d"):
-                df = self.logger.load_log()
+                df = LogParser.load_log()
                 show_daily_timeline(df)
             elif key == ord("w"):
-                df = self.logger.load_log()
+                df = LogParser.load_log()
                 show_weekly_stats(df)
             elif key == ord("a"):
                 self.logger.log("sudden acceleration")

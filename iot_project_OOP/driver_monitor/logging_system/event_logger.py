@@ -1,6 +1,5 @@
 # event_logger.py
 import datetime
-import pandas as pd
 import sys
 import os
 
@@ -24,19 +23,4 @@ class EventLogger:
             print(f"[LOG] {event_type}")
         except IOError as e:
             print(f"Error writing log: {e}")
-
-    def load_log(self):
-        try:
-            df = pd.read_csv(
-                self.log_file,
-                sep="|",
-                names=["Timestamp", "EventType"],
-                skipinitialspace=True,
-                header=None
-            )
-            df["Timestamp"] = df["Timestamp"].str.strip()
-            df["Timestamp"] = pd.to_datetime(df["Timestamp"], format="%Y %m %d %H %M %S")
-            return df
-        except Exception:
-            return pd.DataFrame()
 
