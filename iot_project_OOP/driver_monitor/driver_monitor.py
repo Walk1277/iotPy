@@ -10,21 +10,33 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from driver_monitor.camera.camera_manager import CameraManager
-from driver_monitor.camera.overlay_renderer import OverlayRenderer
-from driver_monitor.fatigue.fatigue_detector import FatigueDetector
-from driver_monitor.sensors.accelerometer_detector import AccelerometerDetector
-from driver_monitor.sensors.speaker_controller import SpeakerController
-from driver_monitor.logging_system.event_logger import EventLogger
+# 라즈베리파이 호환성을 위해 상대/절대 import 모두 시도
+try:
+    # 상대 import 시도 (패키지로 실행될 때)
+    from .camera.camera_manager import CameraManager
+    from .camera.overlay_renderer import OverlayRenderer
+    from .fatigue.fatigue_detector import FatigueDetector
+    from .sensors.accelerometer_detector import AccelerometerDetector
+    from .sensors.speaker_controller import SpeakerController
+    from .logging_system.event_logger import EventLogger
+    from .visualization.daily_timeline import show_daily_timeline
+    from .visualization.weekly_stats import show_weekly_stats
+except ImportError:
+    # 절대 import (직접 실행 시)
+    from driver_monitor.camera.camera_manager import CameraManager
+    from driver_monitor.camera.overlay_renderer import OverlayRenderer
+    from driver_monitor.fatigue.fatigue_detector import FatigueDetector
+    from driver_monitor.sensors.accelerometer_detector import AccelerometerDetector
+    from driver_monitor.sensors.speaker_controller import SpeakerController
+    from driver_monitor.logging_system.event_logger import EventLogger
+    from driver_monitor.visualization.daily_timeline import show_daily_timeline
+    from driver_monitor.visualization.weekly_stats import show_weekly_stats
 
+# 프로젝트 루트의 config는 절대 import
 from config import (
     IMPACT_CHECK_DELAY,
     ALERT_CONFIRM_DELAY
 )
-
-# visualization
-from driver_monitor.visualization.daily_timeline import show_daily_timeline
-from driver_monitor.visualization.weekly_stats import show_weekly_stats
 
 
 class DriverMonitor:
