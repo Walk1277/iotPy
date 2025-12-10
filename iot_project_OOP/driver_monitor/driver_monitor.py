@@ -4,15 +4,15 @@ import datetime
 import sys
 import os
 
-# 프로젝트 루트를 Python path에 추가 (라즈베리파이 호환성)
-# main.py에서 이미 추가되었을 수 있지만, 직접 실행 시를 대비
+# Add project root to Python path (Raspberry Pi compatibility)
+# May already be added by main.py, but prepare for direct execution
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# 라즈베리파이 호환성을 위해 상대/절대 import 모두 시도
+# Try both relative and absolute imports for Raspberry Pi compatibility
 try:
-    # 상대 import 시도 (패키지로 실행될 때)
+    # Try relative import (when executed as a package)
     from .camera.camera_manager import CameraManager
     from .camera.overlay_renderer import OverlayRenderer
     from .fatigue.fatigue_detector import FatigueDetector
@@ -22,7 +22,7 @@ try:
     from .visualization.daily_timeline import show_daily_timeline
     from .visualization.weekly_stats import show_weekly_stats
 except ImportError:
-    # 절대 import (직접 실행 시)
+    # Absolute import (when executed directly)
     from driver_monitor.camera.camera_manager import CameraManager
     from driver_monitor.camera.overlay_renderer import OverlayRenderer
     from driver_monitor.fatigue.fatigue_detector import FatigueDetector
@@ -32,7 +32,7 @@ except ImportError:
     from driver_monitor.visualization.daily_timeline import show_daily_timeline
     from driver_monitor.visualization.weekly_stats import show_weekly_stats
 
-# 프로젝트 루트의 config는 절대 import
+# Use absolute import for config at project root
 from config import (
     IMPACT_CHECK_DELAY,
     ALERT_CONFIRM_DELAY

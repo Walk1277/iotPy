@@ -4,7 +4,7 @@ import datetime
 import sys
 import os
 
-# 프로젝트 루트를 Python path에 추가 (라즈베리파이 호환성)
+# Add project root to Python path (Raspberry Pi compatibility)
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
@@ -34,7 +34,7 @@ class EmergencyManager:
 
  
     def register_impact(self, accel_value: float):
-        """ADXL345에서 임계값 초과 시 호출"""
+        """Called when ADXL345 threshold is exceeded"""
         self.impact_mode = True
         self.impact_time = datetime.datetime.now()
         self.alert_start_time = None
@@ -49,9 +49,10 @@ class EmergencyManager:
 
     def update(self, face_detected: bool, ear_low: bool):
         """
-        main.py 루프에서 매 프레임 호출
-        face_detected: 얼굴이 보이는지 여부
-        ear_low: 졸음 EAR 조건 충족 여부
+        Called every frame in main.py loop
+        Args:
+            face_detected: Whether face is detected
+            ear_low: Whether drowsiness EAR condition is met
         """
 
         if not self.impact_mode:
