@@ -12,12 +12,12 @@ echo "=========================================="
 echo ""
 
 # Check if Python backend is already running
-if pgrep -f "main.py start" > /dev/null; then
+if pgrep -f "main.py" > /dev/null; then
     echo "⚠️  Python backend is already running!"
     read -p "Kill existing process and restart? (y/n): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        pkill -f "main.py start"
+        pkill -f "main.py"
         sleep 1
     else
         echo "Keeping existing backend process."
@@ -72,6 +72,6 @@ cd ui
 echo ""
 echo "🛑 Stopping backend..."
 kill $BACKEND_PID 2>/dev/null
-pkill -f "main.py start" 2>/dev/null
+pkill -f "main.py" 2>/dev/null
 echo "✅ All processes stopped."
 

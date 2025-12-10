@@ -7,13 +7,13 @@ echo "Stopping IoT Driver Monitoring System..."
 echo ""
 
 # Stop Python backend
-if pgrep -f "main.py start" > /dev/null; then
+if pgrep -f "main.py" > /dev/null; then
     echo "Stopping Python backend..."
-    pkill -f "main.py start"
+    pkill -f "main.py"
     sleep 1
-    if pgrep -f "main.py start" > /dev/null; then
+    if pgrep -f "main.py" > /dev/null; then
         echo "Force killing backend..."
-        pkill -9 -f "main.py start"
+        pkill -9 -f "main.py"
     fi
     echo "✅ Backend stopped"
 else
