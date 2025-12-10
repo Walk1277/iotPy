@@ -99,8 +99,16 @@ class DriverMonitor:
             # =========================================
             # 2)
             # =========================================
-            face_detected, ear, (left_pts, right_pts), alarm_on = \
-                self.fatigue.analyze(frame_rgb, imgW, imgH)
+            analyze_result = self.fatigue.analyze(frame_rgb, imgW, imgH)
+            face_detected = analyze_result[0]
+            ear = analyze_result[1]
+            # Handle tuple unpacking safely (Raspberry Pi compatibility)
+            pts_tuple = analyze_result[2]
+            if pts_tuple is not None:
+                left_pts, right_pts = pts_tuple
+            else:
+                left_pts, right_pts = None, None
+            alarm_on = analyze_result[3]
 
             prev = prev_alarm_on
             prev_alarm_on = alarm_on
