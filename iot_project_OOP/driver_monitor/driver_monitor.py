@@ -19,6 +19,7 @@ try:
     from .sensors.accelerometer_detector import AccelerometerDetector
     from .sensors.speaker_controller import SpeakerController
     from .logging_system.event_logger import EventLogger
+    from .report.report_manager import ReportManager
     from .visualization.daily_timeline import show_daily_timeline
     from .visualization.weekly_stats import show_weekly_stats
 except ImportError:
@@ -29,6 +30,7 @@ except ImportError:
     from driver_monitor.sensors.accelerometer_detector import AccelerometerDetector
     from driver_monitor.sensors.speaker_controller import SpeakerController
     from driver_monitor.logging_system.event_logger import EventLogger
+    from driver_monitor.report.report_manager import ReportManager
     from driver_monitor.visualization.daily_timeline import show_daily_timeline
     from driver_monitor.visualization.weekly_stats import show_weekly_stats
 
@@ -49,6 +51,7 @@ class DriverMonitor:
         self.speaker = SpeakerController()
         self.overlay = OverlayRenderer()
         self.logger = EventLogger()
+        self.report_manager = ReportManager(logger=self.logger)
 
         self.running = True
 
@@ -151,7 +154,7 @@ class DriverMonitor:
                 frame = self.overlay.put_text(frame, "no face", (10, 30), (0, 0, 255))
 
             # =========================================
-            # 5)
+            # 5) Accelerometer reading
             # =========================================
             accel_data = None
             event = None
@@ -177,6 +180,55 @@ class DriverMonitor:
                         (0, 255, 255),
                         scale=0.7
                     )
+
+            # =========================================
+            # 5.5) Report system check (before keyboard input)
+            # =========================================
+            # Update report manager (initial check without keyboard input)
+            report_status = self.report_manager.update(accel_data, face_detected, None)
+            
+            # Handle report system alerts
+            if report_status['status'] == 'ALERT':
+                # Show alert message
+                message = report_status['message']
+                remaining = report_status['remaining_time']
+                
+                # Display message on screen
+                frame = self.overlay.put_text(
+                    frame,
+                    message,
+                    (10, imgH // 2),
+                    (0, 0, 255),
+                    scale=1.2
+                )
+                frame = self.overlay.put_text(
+                    frame,
+                    f"Time remaining: {remaining:.1f}s",
+                    (10, imgH // 2 + 40),
+                    (255, 0, 0),
+                    scale=1.0
+                )
+                
+                # Play alert sound
+                self.speaker.alarm_on()
+                
+            elif report_status['status'] == 'REPORTING':
+                # Report process initiated
+                frame = self.overlay.put_text(
+                    frame,
+                    "!!! REPORT PROCESS INITIATED !!!",
+                    (10, imgH // 2),
+                    (0, 0, 255),
+                    scale=1.5
+                )
+                self.speaker.alarm_on()
+                # Stop alarm after showing message
+                # (In real implementation, this would trigger actual report process)
+                
+            elif report_status['status'] == 'NORMAL':
+                # Normal state - stop alarm if it was on
+                if report_status.get('was_alerting', False):
+                    self.speaker.alarm_off()
 
             # =====================================================
             # 6) 
@@ -233,10 +285,20 @@ class DriverMonitor:
                         )
 
             # ============================
-            # 7)
+            # 7) Display and keyboard input
             # ============================
             cv2.imshow("Drowsiness Monitor", frame)
             key = cv2.waitKey(1) & 0xFF
+
+            # Handle keyboard input for report system
+            if report_status['status'] == 'ALERT' and key != 255 and key != 0:
+                # Any key pressed during alert cancels report
+                keyboard_input = chr(key) if key != 255 and key != 0 else None
+                if keyboard_input:
+                    report_status = self.report_manager.update(accel_data, face_detected, keyboard_input)
+                    if report_status['status'] == 'NORMAL':
+                        self.speaker.alarm_off()
+                        print(f"[Report] User pressed '{keyboard_input}'. Report cancelled.")
 
             if key == ord("q"):
                 break
