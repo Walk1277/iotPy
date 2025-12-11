@@ -3,16 +3,34 @@
 # Fix Gradle wrapper JAR missing issue on Raspberry Pi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/ui" || exit 1
 
 echo "=========================================="
 echo "Gradle Wrapper 복구 스크립트"
 echo "=========================================="
 echo ""
 
-# Check if we're in the right directory
+# Check if ui directory exists
+if [ ! -d "$SCRIPT_DIR/ui" ]; then
+    echo "❌ Error: ui directory not found at $SCRIPT_DIR/ui"
+    echo "   Please ensure this script is in the project root directory."
+    exit 1
+fi
+
+# Change to ui directory
+cd "$SCRIPT_DIR/ui" || {
+    echo "❌ Error: Cannot change to ui directory: $SCRIPT_DIR/ui"
+    exit 1
+}
+
+# Check if we're in the right directory (ui directory should have build.gradle.kts)
 if [ ! -f "build.gradle.kts" ]; then
-    echo "❌ Error: build.gradle.kts not found. Please run this script from project root."
+    echo "❌ Error: build.gradle.kts not found in $PWD"
+    echo "   Current directory: $PWD"
+    echo "   Expected location: $SCRIPT_DIR/ui/build.gradle.kts"
+    echo ""
+    echo "   Please check:"
+    echo "   1. This script should be in the project root directory"
+    echo "   2. The ui/ directory should contain build.gradle.kts"
     exit 1
 fi
 

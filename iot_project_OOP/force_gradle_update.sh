@@ -3,12 +3,31 @@
 # Force update Gradle wrapper to 8.10.2
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/ui" || exit 1
 
 echo "=========================================="
 echo "Gradle Wrapper 강제 업데이트"
 echo "=========================================="
 echo ""
+
+# Check if ui directory exists
+if [ ! -d "$SCRIPT_DIR/ui" ]; then
+    echo "❌ Error: ui directory not found at $SCRIPT_DIR/ui"
+    echo "   Please ensure this script is in the project root directory."
+    exit 1
+fi
+
+# Change to ui directory
+cd "$SCRIPT_DIR/ui" || {
+    echo "❌ Error: Cannot change to ui directory: $SCRIPT_DIR/ui"
+    exit 1
+}
+
+# Check if build.gradle.kts exists
+if [ ! -f "build.gradle.kts" ]; then
+    echo "❌ Error: build.gradle.kts not found in $PWD"
+    echo "   Current directory: $PWD"
+    exit 1
+fi
 
 # Remove old Gradle cache
 echo "🧹 기존 Gradle 캐시 정리 중..."
