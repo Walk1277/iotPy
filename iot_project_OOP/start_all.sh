@@ -52,8 +52,19 @@ echo ""
 sleep 2
 
 # Check if backend started successfully
+sleep 1
 if ! ps -p $BACKEND_PID > /dev/null; then
-    echo "❌ Backend failed to start. Check backend.log for details."
+    echo "❌ Backend failed to start. Checking logs..."
+    if [ -f "backend.log" ]; then
+        echo "=== Backend Log (last 20 lines) ==="
+        tail -20 backend.log
+        echo "==================================="
+    fi
+    echo ""
+    echo "Troubleshooting:"
+    echo "1. Check Python dependencies: pip3 install -r requirements.txt"
+    echo "2. Check camera access: lsusb or v4l2-ctl --list-devices"
+    echo "3. Try running backend manually: python3 main.py start"
     exit 1
 fi
 
@@ -88,6 +99,40 @@ fi
 # Ensure gradlew is executable
 chmod +x ./gradlew
 
+# Force Gradle wrapper update to 8.10.2 if needed
+if [ -f "gradle/wrapper/gradle-wrapper.properties" ]; then
+    CURRENT_VERSION=$(grep "distributionUrl" gradle/wrapper/gradle-wrapper.properties | grep -o "gradle-[0-9.]*" | cut -d- -f2)
+    if [ "$CURRENT_VERSION" != "8.10.2" ]; then
+        echo "⚠️  Gradle wrapper version mismatch. Updating to 8.10.2..."
+        if command -v gradle &> /dev/null; then
+            gradle wrapper --gradle-version 8.10.2
+        else
+            echo "   Installing Gradle to update wrapper..."
+            sudo apt update && sudo apt install -y gradle
+            gradle wrapper --gradle-version 8.10.2
+        fi
+        chmod +x ./gradlew
+    fi
+fi
+
+# Ensure gradle-wrapper.jar exists
+if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+    echo "⚠️  gradle-wrapper.jar not found. Attempting to fix..."
+    if command -v gradle &> /dev/null; then
+        gradle wrapper --gradle-version 8.10.2
+        chmod +x ./gradlew
+    else
+        echo "❌ Error: gradle-wrapper.jar missing and Gradle not installed."
+        echo "   Please run: ./fix_gradle_wrapper.sh"
+        echo "   Or install Gradle: sudo apt install gradle"
+        echo ""
+        echo "🛑 Stopping backend..."
+        kill $BACKEND_PID 2>/dev/null
+        pkill -f "main.py" 2>/dev/null
+        exit 1
+    fi
+fi
+
 # Set JAVA_HOME if not set (for Raspberry Pi compatibility)
 if [ -z "$JAVA_HOME" ]; then
     # Try to find Java installation
@@ -99,9 +144,15 @@ if [ -z "$JAVA_HOME" ]; then
         fi
     fi
     
-    # Fallback: try common Java paths on Raspberry Pi
+    # Fallback: try common Java paths on Raspberry Pi (including user home)
     if [ -z "$JAVA_HOME" ] || [ ! -d "$JAVA_HOME" ]; then
-        for path in /usr/lib/jvm/java-21-openjdk-arm64 /usr/lib/jvm/java-21-openjdk-aarch64 /usr/lib/jvm/java-21-openjdk; do
+        for path in \
+            "$HOME/jvm/jdk-21.0.9" \
+            "$HOME/jvm/jdk-21" \
+            /usr/lib/jvm/java-21-openjdk-arm64 \
+            /usr/lib/jvm/java-21-openjdk-aarch64 \
+            /usr/lib/jvm/java-21-openjdk \
+            /opt/java/jdk-21.0.9; do
             if [ -d "$path" ]; then
                 export JAVA_HOME="$path"
                 break

@@ -32,9 +32,15 @@ if [ -z "$JAVA_HOME" ]; then
         fi
     fi
     
-    # Fallback: try common Java paths on Raspberry Pi
+    # Fallback: try common Java paths on Raspberry Pi (including user home)
     if [ -z "$JAVA_HOME" ] || [ ! -d "$JAVA_HOME" ]; then
-        for path in /usr/lib/jvm/java-21-openjdk-arm64 /usr/lib/jvm/java-21-openjdk-aarch64 /usr/lib/jvm/java-21-openjdk; do
+        for path in \
+            "$HOME/jvm/jdk-21.0.9" \
+            "$HOME/jvm/jdk-21" \
+            /usr/lib/jvm/java-21-openjdk-arm64 \
+            /usr/lib/jvm/java-21-openjdk-aarch64 \
+            /usr/lib/jvm/java-21-openjdk \
+            /opt/java/jdk-21.0.9; do
             if [ -d "$path" ]; then
                 export JAVA_HOME="$path"
                 break
