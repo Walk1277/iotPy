@@ -227,7 +227,17 @@ cat data/status.json
 - ✅ 의존성 재설치: `pip3 install --upgrade -r requirements.txt`
 - ✅ Python 경로 확인: `python3 -c "import sys; print(sys.path)"`
 
-### "Gradle 빌드 실패"
+### "Gradle 빌드 실패" 또는 "./gradlew: No such file or directory"
+- ✅ **gradlew 파일이 없는 경우:**
+  ```bash
+  # Gradle 설치 (없는 경우)
+  sudo apt install gradle
+  
+  # gradlew 생성
+  cd ui
+  gradle wrapper
+  chmod +x gradlew
+  ```
 - ✅ Gradle wrapper 권한: `chmod +x ui/gradlew`
 - ✅ Java 버전 확인: `java -version`
 - ✅ 빌드 캐시 정리: `cd ui && ./gradlew clean build`

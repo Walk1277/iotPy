@@ -242,6 +242,19 @@ The system creates JSON files in the `data/` directory:
 - Run `./gradlew clean build`
 - Check Gradle wrapper: `chmod +x gradlew`
 
+**"./gradlew: No such file or directory" error:**
+- If gradlew file is missing, you need to generate the Gradle wrapper:
+  ```bash
+  # Install Gradle (if not installed)
+  sudo apt install gradle
+  
+  # Generate gradlew
+  cd ui
+  gradle wrapper
+  chmod +x gradlew
+  ```
+- Or use `start_all.sh` or `start_ui.sh` scripts which will handle this automatically
+
 ### 8. Features
 
 - **Drowsiness Detection**: Real-time EAR calculation and alert

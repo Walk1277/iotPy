@@ -257,6 +257,19 @@ SMS_API_SECRET = "your-api-secret"
 - `./gradlew clean build` 실행
 - Gradle wrapper 확인: `chmod +x gradlew`
 
+**"./gradlew: No such file or directory" 오류:**
+- gradlew 파일이 없는 경우, Gradle wrapper를 생성해야 합니다:
+  ```bash
+  # Gradle 설치 (없는 경우)
+  sudo apt install gradle
+  
+  # gradlew 생성
+  cd ui
+  gradle wrapper
+  chmod +x gradlew
+  ```
+- 또는 `start_all.sh` 또는 `start_ui.sh` 스크립트를 사용하면 자동으로 처리됩니다
+
 ### 8. 기능
 
 - **졸음 감지**: 실시간 EAR 계산 및 알림

@@ -189,6 +189,16 @@ cat data/status.json
   - Fedora: `sudo dnf install java-21-openjdk-devel`
   - Arch: `sudo pacman -S jdk-openjdk`
 
+### "./gradlew: No such file or directory"
+- ✅ gradlew 파일이 없는 경우:
+  ```bash
+  sudo apt install gradle
+  cd ui
+  gradle wrapper
+  chmod +x gradlew
+  ```
+- ✅ 또는 `start_all.sh` 또는 `start_ui.sh` 스크립트를 사용하면 자동으로 처리됩니다
+
 ## 📋 요약
 
 **기억하세요:**

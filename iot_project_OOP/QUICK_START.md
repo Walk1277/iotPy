@@ -113,6 +113,16 @@ cat data/status.json
 - ✅ Java version: `java -version` (should be 21+)
 - ✅ Install: `sudo apt install openjdk-21-jdk`
 
+### "./gradlew: No such file or directory"
+- ✅ If gradlew is missing, generate it:
+  ```bash
+  sudo apt install gradle
+  cd ui
+  gradle wrapper
+  chmod +x gradlew
+  ```
+- ✅ Or use `start_all.sh` or `start_ui.sh` scripts which handle this automatically
+
 ## 📋 Summary
 
 **Remember:**

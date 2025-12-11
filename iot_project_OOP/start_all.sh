@@ -66,6 +66,28 @@ echo "   (Press Ctrl+C to stop both backend and UI)"
 echo ""
 
 cd ui
+
+# Check if gradlew exists, if not, generate it
+if [ ! -f "./gradlew" ]; then
+    echo "⚠️  gradlew not found. Generating Gradle wrapper..."
+    if command -v gradle &> /dev/null; then
+        gradle wrapper
+    else
+        echo "❌ Error: gradlew not found and 'gradle' command is not available."
+        echo "   Please install Gradle or ensure the ui submodule is properly initialized."
+        echo "   To fix this, run:"
+        echo "   cd ui && gradle wrapper"
+        echo ""
+        echo "🛑 Stopping backend..."
+        kill $BACKEND_PID 2>/dev/null
+        pkill -f "main.py" 2>/dev/null
+        exit 1
+    fi
+fi
+
+# Ensure gradlew is executable
+chmod +x ./gradlew
+
 ./gradlew run
 
 # When UI is closed, stop backend
