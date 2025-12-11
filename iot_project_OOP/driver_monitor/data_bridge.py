@@ -145,6 +145,7 @@ class DataBridge:
                     "drowsiness_count": 0,
                     "sudden_acceleration_count": 0,
                     "sudden_stop_count": 0,
+                    "monthly_score": 100,
                     "daily_scores": [],
                     "event_counts": {
                         "sudden_stop": 0,
@@ -160,6 +161,8 @@ class DataBridge:
                 
                 # Calculate daily scores (simplified: 100 - (events * 5))
                 daily_scores = []
+                total_score = 0
+                day_count = 0
                 for date in df['Timestamp'].dt.date.unique():
                     day_events = df[df['Timestamp'].dt.date == date]
                     event_count = len(day_events)
@@ -169,12 +172,18 @@ class DataBridge:
                         "score": score,
                         "day": date.day
                     })
+                    total_score += score
+                    day_count += 1
+                
+                # Calculate monthly score (average of daily scores)
+                monthly_score = int(total_score / day_count) if day_count > 0 else 100
                 
                 summary = {
                     "total_events": len(df),
                     "drowsiness_count": int(drowsiness_count),
                     "sudden_acceleration_count": int(sudden_accel_count),
                     "sudden_stop_count": int(sudden_stop_count),
+                    "monthly_score": monthly_score,
                     "daily_scores": daily_scores,
                     "event_counts": {
                         "sudden_stop": int(sudden_stop_count),

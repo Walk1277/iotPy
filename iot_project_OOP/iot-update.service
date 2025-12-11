@@ -1,0 +1,15 @@
+[Unit]
+Description=IoT Driver Monitoring System Auto Update Service
+After=network.target
+
+[Service]
+Type=oneshot
+User=pi
+WorkingDirectory=/home/pi/iot_project_OOP
+ExecStart=/bin/bash /home/pi/iot_project_OOP/update_system.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
