@@ -247,19 +247,19 @@ class DriverMonitor:
                 
                 # Display message on screen
                 frame = self.overlay.put_text(
-                        frame,
+                    frame,
                     message,
                     (10, imgH // 2),
                     (0, 0, 255),
                     scale=1.2
                 )
-                    frame = self.overlay.put_text(
-                        frame,
+                frame = self.overlay.put_text(
+                    frame,
                     f"Time remaining: {remaining:.1f}s",
                     (10, imgH // 2 + 40),
                     (255, 0, 0),
-                        scale=1.0
-                    )
+                    scale=1.0
+                )
                 
                 # Play alert sound
                 self.speaker.alarm_on()
@@ -267,12 +267,12 @@ class DriverMonitor:
             elif report_status['status'] == 'REPORTING':
                 # Report process initiated
                 frame = self.overlay.put_text(
-                        frame,
+                    frame,
                     "!!! REPORT PROCESS INITIATED !!!",
                     (10, imgH // 2),
                     (0, 0, 255),
                     scale=1.5
-                    )
+                )
                 self.speaker.alarm_on()
                 # Stop alarm after showing message
                 # (In real implementation, this would trigger actual report process)
@@ -288,8 +288,8 @@ class DriverMonitor:
             # Only show window if SHOW_MONITOR_WINDOW environment variable is set
             # On Raspberry Pi, UI is shown separately, so we don't need this window
             if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
-            cv2.imshow("Drowsiness Monitor", frame)
-            key = cv2.waitKey(1) & 0xFF
+                cv2.imshow("Drowsiness Monitor", frame)
+                key = cv2.waitKey(1) & 0xFF
             else:
                 # No window display - just process keyboard input from stdin if available
                 key = 0
@@ -323,5 +323,5 @@ class DriverMonitor:
         self.speaker.cleanup()
         # Only destroy windows if they were created
         if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
-        cv2.destroyAllWindows()
+            cv2.destroyAllWindows()
 
