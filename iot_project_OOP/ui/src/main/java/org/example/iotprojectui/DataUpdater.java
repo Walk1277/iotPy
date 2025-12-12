@@ -44,6 +44,16 @@ public class DataUpdater {
         if (drowsinessJson != null) {
             String state = drowsinessJson.has("state") ? drowsinessJson.get("state").asText() : "unknown";
             boolean alarmOn = drowsinessJson.has("alarm_on") ? drowsinessJson.get("alarm_on").asBoolean() : false;
+            boolean showSpeakerPopup = drowsinessJson.has("show_speaker_popup") && drowsinessJson.get("show_speaker_popup").asBoolean();
+            double alarmDuration = drowsinessJson.has("alarm_duration") ? drowsinessJson.get("alarm_duration").asDouble() : 0.0;
+            
+            // Check if speaker popup should be shown
+            if (showSpeakerPopup && alarmOn) {
+                mainScreenController.showSpeakerStopAlert(alarmDuration);
+            } else if (!alarmOn) {
+                // Reset alert flag when alarm is off
+                mainScreenController.resetSpeakerAlertFlag();
+            }
             
             if (state.equals("sleepy") || alarmOn) {
                 mainScreenController.updateStatusLabel("Alert", "Drowsiness detected!", "#d32f2f");
@@ -80,10 +90,25 @@ public class DataUpdater {
         
         mainScreenController.updateGSensor(String.format("G-sensor: %.1fG", gValue));
         
-        if (impactDetected) {
-            mainScreenController.updateAccidentStatus("Accident Detected!", "#d32f2f");
+        // Check for response request
+        boolean responseRequested = statusJson.has("response_requested") && statusJson.get("response_requested").asBoolean();
+        
+        if (responseRequested) {
+            // Show response request modal
+            String message = statusJson.has("response_message") ? statusJson.get("response_message").asText() : "Touch screen to cancel report";
+            double remainingTime = statusJson.has("response_remaining_time") ? statusJson.get("response_remaining_time").asDouble() : 10.0;
+            
+            mainScreenController.updateResponseRequestModal(message, remainingTime);
+            mainScreenController.updateAccidentStatus("Response Required!", "#ff5722");
         } else {
-            mainScreenController.updateAccidentStatus("No Accident", "#1976d2");
+            // Hide modal if it exists
+            mainScreenController.hideResponseRequestModal();
+            
+            if (impactDetected) {
+                mainScreenController.updateAccidentStatus("Accident Detected!", "#d32f2f");
+            } else {
+                mainScreenController.updateAccidentStatus("No Accident", "#1976d2");
+            }
         }
     }
 }

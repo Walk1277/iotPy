@@ -1,5 +1,6 @@
 package org.example.iotprojectui;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -39,6 +40,9 @@ public class MainScreenController {
     private Label drivingScoreLabel;
     private Label accidentStatusLabel;
     private Label gSensorLabel;
+    
+    // Response request modal
+    private ResponseRequestModal responseModal;
     
     public MainScreenController(BorderPane root) {
         this.mainContainer = new StackPane();
@@ -272,6 +276,109 @@ public class MainScreenController {
     public void updateGSensor(String text) {
         if (gSensorLabel != null) {
             gSensorLabel.setText(text);
+        }
+    }
+    
+    public void showResponseRequestModal(String message, double remainingTime) {
+        Platform.runLater(() -> {
+            // Remove existing modal if any
+            hideResponseRequestModal();
+            
+            // Create and show new modal
+            responseModal = new ResponseRequestModal(message, remainingTime, () -> {
+                // User responded - hide modal
+                hideResponseRequestModal();
+                // TODO: Send response to backend (could use a callback or file-based communication)
+            });
+            
+            // Add modal on top of everything
+            mainContainer.getChildren().add(responseModal);
+        });
+    }
+    
+    public void updateResponseRequestModal(String message, double remainingTime) {
+        Platform.runLater(() -> {
+            if (responseModal != null) {
+                responseModal.updateMessage(message);
+                responseModal.updateCountdown(remainingTime);
+            } else {
+                // Modal doesn't exist, create it
+                showResponseRequestModal(message, remainingTime);
+            }
+        });
+    }
+    
+    public void hideResponseRequestModal() {
+        Platform.runLater(() -> {
+            if (responseModal != null) {
+                responseModal.stop();
+                mainContainer.getChildren().remove(responseModal);
+                responseModal = null;
+            }
+        });
+    }
+    
+    private boolean speakerAlertShown = false;
+    
+    public void showSpeakerStopAlert(double alarmDuration) {
+        Platform.runLater(() -> {
+            // Only show alert once per alarm session
+            if (speakerAlertShown) {
+                return;
+            }
+            
+            speakerAlertShown = true;
+            
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Speaker Alert");
+            alert.setHeaderText("Speaker is Active");
+            alert.setContentText(String.format("The alarm speaker has been active for %.1f seconds.\n\nClick OK to stop the speaker.", alarmDuration));
+            
+            // Set alert to be modal and always on top
+            alert.initOwner(mainContainer.getScene().getWindow());
+            
+            alert.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
+                    // Write stop request to file
+                    writeStopSpeakerRequest();
+                    speakerAlertShown = false;
+                }
+            });
+        });
+    }
+    
+    public void resetSpeakerAlertFlag() {
+        speakerAlertShown = false;
+    }
+    
+    private void writeStopSpeakerRequest() {
+        // Try multiple paths (Raspberry Pi and development)
+        String[] paths = {
+            "/home/pi/iot/data/stop_speaker.json",
+            System.getProperty("user.dir") + "/../data/stop_speaker.json",
+            System.getProperty("user.dir") + "/data/stop_speaker.json",
+            "data/stop_speaker.json"
+        };
+        
+        for (String path : paths) {
+            try {
+                java.nio.file.Files.createDirectories(java.nio.file.Paths.get(path).getParent());
+                
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.node.ObjectNode stopRequest = mapper.createObjectNode();
+                stopRequest.put("stop", true);
+                stopRequest.put("timestamp", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                
+                try (java.io.FileWriter writer = new java.io.FileWriter(path)) {
+                    writer.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(stopRequest));
+                }
+                
+                System.out.println("[MainScreenController] Stop speaker request written to: " + path);
+                break; // Success, exit loop
+            } catch (Exception e) {
+                // Try next path
+                continue;
+            }
         }
     }
 }

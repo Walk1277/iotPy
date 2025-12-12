@@ -56,7 +56,7 @@ class DataBridge:
             os.makedirs(fallback_dir, exist_ok=True)
             print(f"[DataBridge] Permission denied, using fallback: {fallback_dir}")
     
-    def update_drowsiness_status(self, ear=None, face_detected=False, alarm_on=False, state=None):
+    def update_drowsiness_status(self, ear=None, face_detected=False, alarm_on=False, state=None, alarm_duration=0.0, show_speaker_popup=False):
         """
         Update drowsiness status JSON file.
         
@@ -65,6 +65,8 @@ class DataBridge:
             face_detected: bool, Whether face is detected
             alarm_on: bool, Whether drowsiness alarm is active
             state: str or None, State string ("sleepy" or "normal")
+            alarm_duration: float, Duration in seconds that alarm has been on
+            show_speaker_popup: bool, Whether to show speaker stop popup in UI
         """
         if state is None:
             if alarm_on:
@@ -85,7 +87,9 @@ class DataBridge:
             "state": state,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "face_detected": face_detected,
-            "alarm_on": alarm_on
+            "alarm_on": alarm_on,
+            "alarm_duration": alarm_duration,
+            "show_speaker_popup": show_speaker_popup
         }
         
         self._write_json(self.drowsiness_json_path, data)
@@ -113,6 +117,17 @@ class DataBridge:
             x, y, z = accel_data
             accel_magnitude = (x**2 + y**2 + z**2) ** 0.5 / 9.8  # Convert to G
         
+        # Extract response request status from report_status
+        response_requested = False
+        response_message = ""
+        response_remaining_time = 0.0
+        if report_status:
+            status = report_status.get('status', 'NORMAL')
+            if status == 'ALERT':
+                response_requested = True
+                response_message = report_status.get('message', 'Touch screen to cancel report')
+                response_remaining_time = report_status.get('remaining_time', 0.0)
+        
         data = {
             "connection_status": connection_status,
             "sensor_status": sensor_status,
@@ -129,6 +144,9 @@ class DataBridge:
             "gps_position_string": f"({gps_position[0]:.4f}, {gps_position[1]:.4f})" if gps_position else "(-, -)",
             "impact_detected": impact_detected,
             "report_status": report_status or {},
+            "response_requested": response_requested,
+            "response_message": response_message,
+            "response_remaining_time": response_remaining_time,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         

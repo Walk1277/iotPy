@@ -83,6 +83,7 @@ class DriverMonitor:
 
         alarm_on = False
         prev_alarm_on = False
+        alarm_start_time = None  # Track when alarm started
 
         # Accelerometer event display text
         accel_event_text = ""
@@ -121,7 +122,9 @@ class DriverMonitor:
             self.data_bridge.update_drowsiness_status(
                 ear=ear if face_detected else None,
                 face_detected=face_detected,
-                alarm_on=alarm_on
+                alarm_on=alarm_on,
+                alarm_duration=alarm_duration if alarm_start_time else 0.0,
+                show_speaker_popup=show_speaker_popup
             )
 
             # =========================================
@@ -132,12 +135,30 @@ class DriverMonitor:
                 # Alarm just turned on - log the drowsiness event
                 self.logger.log("drowsiness")
                 print(f"[DriverMonitor] Drowsiness detected and logged. EAR: {ear:.3f}")
+                alarm_start_time = datetime.datetime.now()
             
-            if alarm_on:
+            # Check for UI request to stop speaker
+            stop_speaker_request = self._check_stop_speaker_request()
+            if stop_speaker_request:
+                self.speaker.alarm_off()
+                alarm_on = False
+                alarm_start_time = None
+                print("[DriverMonitor] Speaker stopped by UI request")
+            
+            # Calculate alarm duration and check if popup should be shown
+            alarm_duration = 0.0
+            show_speaker_popup = False
+            if alarm_on and not stop_speaker_request:
+                if alarm_start_time:
+                    alarm_duration = (datetime.datetime.now() - alarm_start_time).total_seconds()
+                    if alarm_duration >= 1.0:
+                        show_speaker_popup = True
                 self.speaker.alarm_on()
             else:
                 if prev_alarm_on:
                     self.speaker.alarm_off()
+                if not alarm_on:
+                    alarm_start_time = None
             
             # Update prev_alarm_on AFTER checking state change
             prev_alarm_on = alarm_on
@@ -208,17 +229,23 @@ class DriverMonitor:
             # =========================================
             # 5.6) Report system check (before keyboard input)
             # =========================================
+            # Check for UI response (touch screen)
+            ui_response = self._check_ui_response()
+            
             # Update report manager (initial check without keyboard input)
             # Pass EAR and threshold for eyes closed detection
             # Get current threshold from config (supports runtime updates)
             importlib.reload(config)
             current_threshold = config.EAR_THRESHOLD
             
+            # Use UI response if available, otherwise use keyboard input
+            user_input = ui_response if ui_response is not None else None
+            
             report_status = self.report_manager.update(
                 face_detected=face_detected,
                 ear=ear if face_detected else None,
                 ear_threshold=current_threshold,
-                keyboard_input=None
+                keyboard_input=user_input
             )
             
             # Update system status for UI
@@ -294,8 +321,24 @@ class DriverMonitor:
                 # No window display - just process keyboard input from stdin if available
                 key = 0
 
-            # Handle keyboard input for report system and quit
-            if report_status['status'] == 'ALERT' and key != 255 and key != 0:
+            # Handle UI response and keyboard input for report system
+            # Check UI response first (touch screen), then keyboard
+            ui_response = self._check_ui_response()
+            if ui_response is not None and report_status['status'] == 'ALERT':
+                # Get current threshold from config (supports runtime updates)
+                importlib.reload(config)
+                current_threshold = config.EAR_THRESHOLD
+                
+                report_status = self.report_manager.update(
+                    face_detected=face_detected,
+                    ear=ear if face_detected else None,
+                    ear_threshold=current_threshold,
+                    keyboard_input=ui_response
+                )
+                if report_status['status'] == 'NORMAL':
+                    self.speaker.alarm_off()
+                    print(f"[Report] User responded via UI. Report cancelled.")
+            elif report_status['status'] == 'ALERT' and key != 255 and key != 0:
                 # Any key pressed during alert cancels report
                 keyboard_input = chr(key) if key != 255 and key != 0 else None
                 if keyboard_input:
@@ -324,4 +367,74 @@ class DriverMonitor:
         # Only destroy windows if they were created
         if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
             cv2.destroyAllWindows()
+    
+    def _check_ui_response(self):
+        """
+        Check if user responded via UI (touch screen).
+        Reads user_response.json file created by JavaFX UI.
+        
+        Returns:
+            str or None: User input if response file exists, None otherwise
+        """
+        import json
+        
+        # Try multiple paths (Raspberry Pi and development)
+        paths = [
+            "/home/pi/iot/data/user_response.json",
+            os.path.join(project_root, "data", "user_response.json"),
+            os.path.join(self.data_bridge.get_data_path(), "user_response.json")
+        ]
+        
+        for path in paths:
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        response_data = json.load(f)
+                        if response_data.get('responded', False):
+                            # Delete the response file after reading
+                            try:
+                                os.remove(path)
+                            except:
+                                pass
+                            return "UI_RESPONSE"  # Return a marker string
+                except Exception as e:
+                    # File exists but couldn't read it, continue to next path
+                    continue
+        
+        return None
+    
+    def _check_stop_speaker_request(self):
+        """
+        Check if UI requested to stop the speaker.
+        Reads stop_speaker.json file created by JavaFX UI.
+        
+        Returns:
+            bool: True if stop request exists, False otherwise
+        """
+        import json
+        
+        # Try multiple paths (Raspberry Pi and development)
+        paths = [
+            "/home/pi/iot/data/stop_speaker.json",
+            os.path.join(project_root, "data", "stop_speaker.json"),
+            os.path.join(self.data_bridge.get_data_path(), "stop_speaker.json")
+        ]
+        
+        for path in paths:
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        stop_data = json.load(f)
+                        if stop_data.get('stop', False):
+                            # Delete the stop request file after reading
+                            try:
+                                os.remove(path)
+                            except:
+                                pass
+                            return True
+                except Exception as e:
+                    # File exists but couldn't read it, continue to next path
+                    continue
+        
+        return False
 
