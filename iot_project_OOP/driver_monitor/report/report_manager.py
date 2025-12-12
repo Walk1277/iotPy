@@ -286,7 +286,14 @@ class ReportManager:
         """
         Send SMS report when emergency conditions are met and no response received.
         """
-        if not SMS_ENABLED or not self.sms_service:
+        # Reload config to get latest SMS settings
+        import config
+        importlib.reload(config)
+        current_sms_enabled = getattr(config, 'SMS_ENABLED', False)
+        current_from_number = getattr(config, 'SMS_FROM_NUMBER', '')
+        current_to_number = getattr(config, 'SMS_TO_NUMBER', '')
+        
+        if not current_sms_enabled or not self.sms_service:
             print("[Report] SMS reporting is disabled or service not available.")
             return
         
@@ -317,10 +324,10 @@ class ReportManager:
                 f"No user response. Emergency situation detected. Reporting now."
             )
             
-            # Create message object
+            # Create message object with dynamically loaded phone numbers
             message = RequestMessage(
-                from_=SMS_FROM_NUMBER,
-                to=SMS_TO_NUMBER,
+                from_=current_from_number,
+                to=current_to_number,
                 text=message_text,
             )
             

@@ -26,8 +26,8 @@ AUTO_REPORT_ENABLED = True
 # SMS report settings (SOLAPI)
 SMS_API_KEY = "NCSAQFYKNA3STO4Y"  # Replace with your SOLAPI API key
 SMS_API_SECRET = "AGRKNIE1BS6VKQQCXYACG6Z9HAW1XKXA"  # Replace with your SOLAPI API secret
-SMS_FROM_NUMBER = "010-7220-5917"  # Replace with your registered sender number
-SMS_TO_NUMBER = "010-4090-7445"  # Replace with recipient number
+SMS_FROM_NUMBER = "010-7220-5917"
+SMS_TO_NUMBER = "010-4090-7445"
 SMS_ENABLED = True  # Set to True to enable SMS reporting
 
 # GPS settings
@@ -39,4 +39,5 @@ GPS_BAUD_RATE = 9600  # GPS baud rate
 UI_DATA_DIR = "data"  # Relative to project root
 UI_DROWSINESS_JSON = "drowsiness.json"  # File name for drowsiness status
 UI_STATUS_JSON = "status.json"  # File name for system status
-
+SMS_FROM_NUMBER = "010-7220-5917"
+SMS_TO_NUMBER = "010-4090-7445"

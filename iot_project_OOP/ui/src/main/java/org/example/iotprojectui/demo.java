@@ -211,7 +211,13 @@ public class demo extends Application {
         drowsinessSettingsBtn.setStyle("-fx-font-size: 11px;");
         drowsinessSettingsBtn.setOnAction(e -> showDrowsinessSettingsScreen());
         
-        panel.getChildren().addAll(title, updateBtn, personalSettingsBtn, drowsinessSettingsBtn);
+        Button autoReportSettingsBtn = new Button("자동 신고설정");
+        autoReportSettingsBtn.setPrefWidth(Double.MAX_VALUE);
+        autoReportSettingsBtn.setPrefHeight(30);
+        autoReportSettingsBtn.setStyle("-fx-font-size: 11px;");
+        autoReportSettingsBtn.setOnAction(e -> showAutoReportSettingsScreen());
+        
+        panel.getChildren().addAll(title, updateBtn, personalSettingsBtn, drowsinessSettingsBtn, autoReportSettingsBtn);
         
         return panel;
     }
@@ -602,82 +608,24 @@ public class demo extends Application {
         Label title = new Label("소프트웨어 업데이트");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
-        Label currentVersion = new Label("현재 버전: v1.0.0");
-        currentVersion.setStyle("-fx-font-size: 14px;");
-        
-        Label latestVersion = new Label("최신 버전: 확인 필요");
-        latestVersion.setStyle("-fx-font-size: 14px;");
+        Label descriptionLabel = new Label("requirements.txt에 있는 Python 패키지들을 최신 버전으로 업데이트합니다.");
+        descriptionLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+        descriptionLabel.setWrapText(true);
         
         TextArea updateLogArea = new TextArea();
         updateLogArea.setEditable(false);
-        updateLogArea.setPrefRowCount(8);
+        updateLogArea.setPrefRowCount(15);
         updateLogArea.setStyle("-fx-font-size: 10px;");
-        updateLogArea.setText("업데이트 로그가 여기에 표시됩니다...\n");
+        updateLogArea.setText("업데이트 로그가 여기에 표시됩니다...\n\n");
         
-        Button checkBtn = new Button("업데이트 확인");
-        checkBtn.setOnAction(e -> {
-            checkBtn.setDisable(true);
-            updateLogArea.appendText("[INFO] GitHub에서 최신 버전 확인 중...\n");
-            
-            CompletableFuture.runAsync(() -> {
-                try {
-                    // Get project directory (handle both development and Raspberry Pi)
-                    String projectDir = System.getProperty("user.dir");
-                    if (projectDir.contains("ui")) {
-                        projectDir = new java.io.File(projectDir).getParent();
-                    }
-                    
-                    String scriptPath = projectDir + "/check_update.sh";
-                    java.io.File scriptFile = new java.io.File(scriptPath);
-                    
-                    // Try alternative paths for Raspberry Pi
-                    if (!scriptFile.exists()) {
-                        String altPath = "/home/pi/iot_project_OOP/check_update.sh";
-                        if (new java.io.File(altPath).exists()) {
-                            scriptPath = altPath;
-                            projectDir = "/home/pi/iot_project_OOP";
-                        }
-                    }
-                    
-                    ProcessBuilder pb = new ProcessBuilder("bash", scriptPath);
-                    pb.directory(new java.io.File(projectDir));
-                    Process process = pb.start();
-                    
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                    String result = reader.readLine();
-                    int exitCode = process.waitFor();
-                    
-                    Platform.runLater(() -> {
-                        checkBtn.setDisable(false);
-                        if (exitCode == 0 && result != null) {
-                            if (result.startsWith("UPDATE_AVAILABLE:")) {
-                                String version = result.split(":")[1];
-                                latestVersion.setText("최신 버전: " + version + " (업데이트 필요)");
-                                latestVersion.setStyle("-fx-font-size: 14px; -fx-text-fill: #d32f2f;");
-                                updateLogArea.appendText("[INFO] 새 버전 발견: " + version + "\n");
-                            } else {
-                                String version = result.split(":")[1];
-                                latestVersion.setText("최신 버전: " + version + " (최신 상태)");
-                                latestVersion.setStyle("-fx-font-size: 14px; -fx-text-fill: #2e7d32;");
-                                updateLogArea.appendText("[INFO] 최신 버전입니다.\n");
-                            }
-                        } else {
-                            updateLogArea.appendText("[ERROR] 버전 확인 실패\n");
-                        }
-                    });
-                } catch (Exception ex) {
-                    Platform.runLater(() -> {
-                        checkBtn.setDisable(false);
-                        updateLogArea.appendText("[ERROR] " + ex.getMessage() + "\n");
-                    });
-                }
-            });
-        });
-        
-        Button updateBtn = new Button("업데이트 실행");
+        Button updateBtn = new Button("패키지 업데이트 실행");
+        updateBtn.setPrefWidth(Double.MAX_VALUE);
+        updateBtn.setStyle("-fx-font-size: 14px;");
         updateBtn.setOnAction(e -> {
             updateBtn.setDisable(true);
-            updateLogArea.appendText("[INFO] 시스템 업데이트 시작...\n");
+            updateLogArea.clear();
+            updateLogArea.appendText("=== Python 패키지 업데이트 시작 ===\n");
+            updateLogArea.appendText("requirements.txt에 있는 패키지들을 최신 버전으로 업데이트합니다.\n\n");
             
             CompletableFuture.runAsync(() -> {
                 try {
@@ -687,47 +635,103 @@ public class demo extends Application {
                         projectDir = new java.io.File(projectDir).getParent();
                     }
                     
-                    String scriptPath = projectDir + "/update_system.sh";
-                    java.io.File scriptFile = new java.io.File(scriptPath);
+                    String scriptPathTemp = projectDir + "/update_system.sh";
+                    java.io.File scriptFile = new java.io.File(scriptPathTemp);
                     
                     // Try alternative paths for Raspberry Pi
                     if (!scriptFile.exists()) {
                         String altPath = "/home/pi/iot_project_OOP/update_system.sh";
                         if (new java.io.File(altPath).exists()) {
-                            scriptPath = altPath;
+                            scriptPathTemp = altPath;
                             projectDir = "/home/pi/iot_project_OOP";
                         }
                     }
+                    
+                    final String scriptPath = scriptPathTemp;
+                    
+                    // Check if script exists
+                    if (!new java.io.File(scriptPath).exists()) {
+                        Platform.runLater(() -> {
+                            updateBtn.setDisable(false);
+                            updateLogArea.appendText("[ERROR] update_system.sh 파일을 찾을 수 없습니다.\n");
+                            updateLogArea.appendText("경로: " + scriptPath + "\n");
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("오류");
+                            alert.setHeaderText("스크립트 파일을 찾을 수 없습니다");
+                            alert.setContentText("update_system.sh 파일이 존재하는지 확인하세요.");
+                            alert.showAndWait();
+                        });
+                        return;
+                    }
+                    
+                    // Make script executable
+                    try {
+                        java.io.File scriptFileObj = new java.io.File(scriptPath);
+                        scriptFileObj.setExecutable(true);
+                    } catch (Exception ignored) {}
                     
                     ProcessBuilder pb = new ProcessBuilder("bash", scriptPath);
                     pb.directory(new java.io.File(projectDir));
                     Process process = pb.start();
                     
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    // Read both stdout and stderr
+                    BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                    
+                    // Read stdout
                     String line;
-                    while ((line = reader.readLine()) != null) {
+                    while ((line = stdoutReader.readLine()) != null) {
                         final String logLine = line;
                         Platform.runLater(() -> {
                             updateLogArea.appendText(logLine + "\n");
+                            // Auto-scroll to bottom
+                            updateLogArea.setScrollTop(Double.MAX_VALUE);
+                        });
+                    }
+                    
+                    // Read stderr
+                    while ((line = stderrReader.readLine()) != null) {
+                        final String logLine = "[ERROR] " + line;
+                        Platform.runLater(() -> {
+                            updateLogArea.appendText(logLine + "\n");
+                            updateLogArea.setScrollTop(Double.MAX_VALUE);
                         });
                     }
                     
                     int exitCode = process.waitFor();
+                    
+                    // Also read update.log file if it exists
+                    String logFilePath = projectDir + "/update.log";
+                    java.io.File logFile = new java.io.File(logFilePath);
+                    if (logFile.exists()) {
+                        try {
+                            java.util.Scanner scanner = new java.util.Scanner(logFile);
+                            while (scanner.hasNextLine()) {
+                                final String logLine = scanner.nextLine();
+                                Platform.runLater(() -> {
+                                    updateLogArea.appendText(logLine + "\n");
+                                    updateLogArea.setScrollTop(Double.MAX_VALUE);
+                                });
+                            }
+                            scanner.close();
+                        } catch (Exception ignored) {}
+                    }
+                    
                     Platform.runLater(() -> {
                         updateBtn.setDisable(false);
                         if (exitCode == 0) {
-                            updateLogArea.appendText("[INFO] 업데이트 완료!\n");
+                            updateLogArea.appendText("\n=== 업데이트 완료 ===\n");
                             Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                            alert.setTitle("업데이트");
-                            alert.setHeaderText("업데이트가 완료되었습니다.");
-                            alert.setContentText("시스템을 재시작하는 것을 권장합니다.");
+                            alert.setTitle("업데이트 완료");
+                            alert.setHeaderText("Python 패키지 업데이트가 완료되었습니다.");
+                            alert.setContentText("변경사항을 적용하려면 백엔드를 재시작하는 것을 권장합니다.");
                             alert.showAndWait();
                         } else {
-                            updateLogArea.appendText("[ERROR] 업데이트 실패\n");
+                            updateLogArea.appendText("\n=== 업데이트 실패 (종료 코드: " + exitCode + ") ===\n");
                             Alert alert = new Alert(Alert.AlertType.ERROR);
-                            alert.setTitle("오류");
-                            alert.setHeaderText("업데이트 실패");
-                            alert.setContentText("업데이트 로그를 확인하세요.");
+                            alert.setTitle("업데이트 실패");
+                            alert.setHeaderText("업데이트 중 오류가 발생했습니다.");
+                            alert.setContentText("위의 로그를 확인하여 문제를 해결하세요.");
                             alert.showAndWait();
                         }
                     });
@@ -735,12 +739,18 @@ public class demo extends Application {
                     Platform.runLater(() -> {
                         updateBtn.setDisable(false);
                         updateLogArea.appendText("[ERROR] " + ex.getMessage() + "\n");
+                        ex.printStackTrace();
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("오류");
+                        alert.setHeaderText("업데이트 실행 실패");
+                        alert.setContentText("오류: " + ex.getMessage());
+                        alert.showAndWait();
                     });
                 }
             });
         });
         
-        content.getChildren().addAll(backBtn, title, currentVersion, latestVersion, checkBtn, updateBtn, updateLogArea);
+        content.getChildren().addAll(backBtn, title, descriptionLabel, updateLogArea, updateBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         
@@ -769,94 +779,15 @@ public class demo extends Application {
         Label phoneLabel = new Label("전화번호:");
         TextField phoneField = new TextField("010-0000-0000");
         
-        Separator separator1 = new Separator();
-        
-        Label autoReportLabel = new Label("자동 신고 설정");
-        autoReportLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
-        
-        CheckBox autoReportCheck = new CheckBox("자동 신고 활성화");
-        autoReportCheck.setSelected(true);
-        
         Button saveBtn = new Button("저장");
         saveBtn.setOnAction(e -> {
-            boolean autoReportEnabled = autoReportCheck.isSelected();
-            
-            // Save auto report setting
-            CompletableFuture.runAsync(() -> {
-                try {
-                    String projectDir = System.getProperty("user.dir");
-                    if (projectDir.contains("ui")) {
-                        projectDir = new java.io.File(projectDir).getParent();
-                    }
-                    
-                    String[] pythonPaths = {"python3", "python"};
-                    String pythonCmd = "python3";
-                    for (String path : pythonPaths) {
-                        try {
-                            Process testProcess = new ProcessBuilder(path, "--version").start();
-                            if (testProcess.waitFor() == 0) {
-                                pythonCmd = path;
-                                break;
-                            }
-                        } catch (Exception ignored) {}
-                    }
-                    
-                    String scriptPath = projectDir + "/update_config.py";
-                    java.io.File scriptFile = new java.io.File(scriptPath);
-                    
-                    if (!scriptFile.exists()) {
-                        String altPath = "/home/pi/iot_project_OOP/update_config.py";
-                        if (new java.io.File(altPath).exists()) {
-                            scriptPath = altPath;
-                            projectDir = "/home/pi/iot_project_OOP";
-                        }
-                    }
-                    
-                    ProcessBuilder pb = new ProcessBuilder(
-                        pythonCmd,
-                        scriptPath,
-                        "AUTO_REPORT_ENABLED",
-                        String.valueOf(autoReportEnabled)
-                    );
-                    pb.directory(new java.io.File(projectDir));
-                    Process process = pb.start();
-                    
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        System.out.println("[Config Update] " + line);
-                    }
-                    
-                    int exitCode = process.waitFor();
-                    Platform.runLater(() -> {
-                        if (exitCode == 0) {
-                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                            alert.setTitle("저장");
-                            alert.setHeaderText("설정이 저장되었습니다.");
-                            alert.setContentText("자동 신고 활성화: " + (autoReportEnabled ? "예" : "아니오"));
-                            alert.showAndWait();
-                        } else {
-                            Alert alert = new Alert(Alert.AlertType.ERROR);
-                            alert.setTitle("오류");
-                            alert.setHeaderText("설정 저장 실패");
-                            alert.setContentText("config.py 업데이트에 실패했습니다.");
-                            alert.showAndWait();
-                        }
-                    });
-                } catch (Exception ex) {
-                    Platform.runLater(() -> {
-                        Alert alert = new Alert(Alert.AlertType.ERROR);
-                        alert.setTitle("오류");
-                        alert.setHeaderText("설정 저장 실패");
-                        alert.setContentText("오류: " + ex.getMessage());
-                        alert.showAndWait();
-                    });
-                }
-            });
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("저장");
+            alert.setHeaderText("설정이 저장되었습니다.");
+            alert.showAndWait();
         });
         
-        content.getChildren().addAll(backBtn, title, nameLabel, nameField, phoneLabel, phoneField, 
-            separator1, autoReportLabel, autoReportCheck, saveBtn);
+        content.getChildren().addAll(backBtn, title, nameLabel, nameField, phoneLabel, phoneField, saveBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         
@@ -893,15 +824,11 @@ public class demo extends Application {
         CheckBox alarmCheck = new CheckBox("알람 활성화");
         alarmCheck.setSelected(true);
         
-        CheckBox autoReportCheck = new CheckBox("자동 신고 활성화");
-        autoReportCheck.setSelected(true);
-        
         Button saveBtn = new Button("저장");
         saveBtn.setOnAction(e -> {
-            // Save threshold and auto report settings to config.py
+            // Save threshold settings to config.py
             double thresholdValue = thresholdSlider.getValue();
             boolean alarmEnabled = alarmCheck.isSelected();
-            boolean autoReportEnabled = autoReportCheck.isSelected();
             
             // Run Python script to update config
             CompletableFuture.runAsync(() -> {
@@ -955,29 +882,13 @@ public class demo extends Application {
                     }
                     int exitCode1 = process1.waitFor();
                     
-                    // Update AUTO_REPORT_ENABLED
-                    ProcessBuilder pb2 = new ProcessBuilder(
-                        pythonCmd,
-                        scriptPath,
-                        "AUTO_REPORT_ENABLED",
-                        String.valueOf(autoReportEnabled)
-                    );
-                    pb2.directory(new java.io.File(projectDir));
-                    Process process2 = pb2.start();
-                    
-                    BufferedReader reader2 = new BufferedReader(new InputStreamReader(process2.getInputStream()));
-                    while ((line = reader2.readLine()) != null) {
-                        System.out.println("[Config Update] " + line);
-                    }
-                    int exitCode2 = process2.waitFor();
-                    
                     Platform.runLater(() -> {
-                        if (exitCode1 == 0 && exitCode2 == 0) {
+                        if (exitCode1 == 0) {
                             Alert alert = new Alert(Alert.AlertType.INFORMATION);
                             alert.setTitle("저장");
                             alert.setHeaderText("설정이 저장되었습니다.");
-                            alert.setContentText(String.format("임계값: %.2f\n알람 활성화: %s\n자동 신고 활성화: %s", 
-                                thresholdValue, alarmEnabled ? "예" : "아니오", autoReportEnabled ? "예" : "아니오"));
+                            alert.setContentText(String.format("임계값: %.2f\n알람 활성화: %s", 
+                                thresholdValue, alarmEnabled ? "예" : "아니오"));
                             alert.showAndWait();
                         } else {
                             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -999,7 +910,270 @@ public class demo extends Application {
             });
         });
         
-        content.getChildren().addAll(backBtn, title, thresholdLabel, thresholdSlider, alarmCheck, autoReportCheck, saveBtn);
+        content.getChildren().addAll(backBtn, title, thresholdLabel, thresholdSlider, alarmCheck, saveBtn);
+        detailScreen.setContent(content);
+        detailScreen.setFitToWidth(true);
+        
+        mainContainer.getChildren().clear();
+        mainContainer.getChildren().add(detailScreen);
+    }
+    
+    /** Show auto report settings screen */
+    private void showAutoReportSettingsScreen() {
+        ScrollPane detailScreen = new ScrollPane();
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        
+        Button backBtn = new Button("← 뒤로");
+        backBtn.setOnAction(e -> {
+            mainContainer.getChildren().clear();
+            mainContainer.getChildren().add(createMainScreen());
+        });
+        
+        Label title = new Label("자동 신고 설정");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        
+        // Auto report enable/disable
+        CheckBox autoReportCheck = new CheckBox("자동 신고 활성화");
+        autoReportCheck.setSelected(true);
+        
+        Separator separator1 = new Separator();
+        
+        // Phone number settings
+        Label fromPhoneLabel = new Label("송신 전화번호:");
+        fromPhoneLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        TextField fromPhoneField = new TextField("010-7220-5917");
+        fromPhoneField.setPromptText("예: 010-1234-5678");
+        
+        Label toPhoneLabel = new Label("수신 전화번호:");
+        toPhoneLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        TextField toPhoneField = new TextField("010-4090-7445");
+        toPhoneField.setPromptText("예: 010-1234-5678");
+        
+        Separator separator2 = new Separator();
+        
+        // System log clear button
+        Label systemLabel = new Label("시스템 관리");
+        systemLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        
+        Button clearLogsBtn = new Button("시스템 로그 초기화");
+        clearLogsBtn.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-size: 14px;");
+        clearLogsBtn.setPrefWidth(Double.MAX_VALUE);
+        clearLogsBtn.setOnAction(e -> {
+            Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmAlert.setTitle("로그 초기화");
+            confirmAlert.setHeaderText("로그를 초기화하시겠습니까?");
+            confirmAlert.setContentText("모든 운전 이벤트 로그가 삭제되고 점수가 100점으로 초기화됩니다.\n이 작업은 되돌릴 수 없습니다.");
+            
+            confirmAlert.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
+                    clearLogsBtn.setDisable(true);
+                    
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            String projectDir = System.getProperty("user.dir");
+                            if (projectDir.contains("ui")) {
+                                projectDir = new java.io.File(projectDir).getParent();
+                            }
+                            
+                            String[] pythonPaths = {"python3", "python"};
+                            String pythonCmd = "python3";
+                            for (String path : pythonPaths) {
+                                try {
+                                    Process testProcess = new ProcessBuilder(path, "--version").start();
+                                    if (testProcess.waitFor() == 0) {
+                                        pythonCmd = path;
+                                        break;
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+                            
+                            String scriptPath = projectDir + "/clear_logs.py";
+                            java.io.File scriptFile = new java.io.File(scriptPath);
+                            
+                            if (!scriptFile.exists()) {
+                                String altPath = "/home/pi/iot_project_OOP/clear_logs.py";
+                                if (new java.io.File(altPath).exists()) {
+                                    scriptPath = altPath;
+                                    projectDir = "/home/pi/iot_project_OOP";
+                                }
+                            }
+                            
+                            ProcessBuilder pb = new ProcessBuilder(pythonCmd, scriptPath);
+                            pb.directory(new java.io.File(projectDir));
+                            Process process = pb.start();
+                            
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                System.out.println("[Clear Logs] " + line);
+                            }
+                            
+                            int exitCode = process.waitFor();
+                            Platform.runLater(() -> {
+                                clearLogsBtn.setDisable(false);
+                                
+                                if (exitCode == 0) {
+                                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                                    successAlert.setTitle("완료");
+                                    successAlert.setHeaderText("로그가 초기화되었습니다.");
+                                    successAlert.setContentText("모든 운전 이벤트 로그가 삭제되고 점수가 100점으로 초기화되었습니다.");
+                                    successAlert.showAndWait();
+                                } else {
+                                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                                    errorAlert.setTitle("오류");
+                                    errorAlert.setHeaderText("로그 초기화 실패");
+                                    errorAlert.setContentText("로그 파일을 초기화하는 중 오류가 발생했습니다.");
+                                    errorAlert.showAndWait();
+                                }
+                            });
+                        } catch (Exception ex) {
+                            Platform.runLater(() -> {
+                                clearLogsBtn.setDisable(false);
+                                Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                                errorAlert.setTitle("오류");
+                                errorAlert.setHeaderText("로그 초기화 실패");
+                                errorAlert.setContentText("오류: " + ex.getMessage());
+                                errorAlert.showAndWait();
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Save button
+        Button saveBtn = new Button("저장");
+        saveBtn.setPrefWidth(Double.MAX_VALUE);
+        saveBtn.setStyle("-fx-font-size: 14px;");
+        saveBtn.setOnAction(e -> {
+            boolean autoReportEnabled = autoReportCheck.isSelected();
+            String fromPhone = fromPhoneField.getText().trim();
+            String toPhone = toPhoneField.getText().trim();
+            
+            // Validate phone numbers
+            if (fromPhone.isEmpty() || toPhone.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("입력 오류");
+                alert.setHeaderText("전화번호를 입력해주세요.");
+                alert.setContentText("송신 및 수신 전화번호를 모두 입력해야 합니다.");
+                alert.showAndWait();
+                return;
+            }
+            
+            saveBtn.setDisable(true);
+            
+            // Save settings
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String projectDir = System.getProperty("user.dir");
+                    if (projectDir.contains("ui")) {
+                        projectDir = new java.io.File(projectDir).getParent();
+                    }
+                    
+                    String[] pythonPaths = {"python3", "python"};
+                    String pythonCmd = "python3";
+                    for (String path : pythonPaths) {
+                        try {
+                            Process testProcess = new ProcessBuilder(path, "--version").start();
+                            if (testProcess.waitFor() == 0) {
+                                pythonCmd = path;
+                                break;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    
+                    String scriptPath = projectDir + "/update_config.py";
+                    java.io.File scriptFile = new java.io.File(scriptPath);
+                    
+                    if (!scriptFile.exists()) {
+                        String altPath = "/home/pi/iot_project_OOP/update_config.py";
+                        if (new java.io.File(altPath).exists()) {
+                            scriptPath = altPath;
+                            projectDir = "/home/pi/iot_project_OOP";
+                        }
+                    }
+                    
+                    // Update AUTO_REPORT_ENABLED
+                    ProcessBuilder pb1 = new ProcessBuilder(
+                        pythonCmd,
+                        scriptPath,
+                        "AUTO_REPORT_ENABLED",
+                        String.valueOf(autoReportEnabled)
+                    );
+                    pb1.directory(new java.io.File(projectDir));
+                    Process process1 = pb1.start();
+                    BufferedReader reader1 = new BufferedReader(new InputStreamReader(process1.getInputStream()));
+                    String line;
+                    while ((line = reader1.readLine()) != null) {
+                        System.out.println("[Config Update] " + line);
+                    }
+                    int exitCode1 = process1.waitFor();
+                    
+                    // Update SMS_FROM_NUMBER
+                    ProcessBuilder pb2 = new ProcessBuilder(
+                        pythonCmd,
+                        scriptPath,
+                        "SMS_FROM_NUMBER",
+                        fromPhone
+                    );
+                    pb2.directory(new java.io.File(projectDir));
+                    Process process2 = pb2.start();
+                    BufferedReader reader2 = new BufferedReader(new InputStreamReader(process2.getInputStream()));
+                    while ((line = reader2.readLine()) != null) {
+                        System.out.println("[Config Update] " + line);
+                    }
+                    int exitCode2 = process2.waitFor();
+                    
+                    // Update SMS_TO_NUMBER
+                    ProcessBuilder pb3 = new ProcessBuilder(
+                        pythonCmd,
+                        scriptPath,
+                        "SMS_TO_NUMBER",
+                        toPhone
+                    );
+                    pb3.directory(new java.io.File(projectDir));
+                    Process process3 = pb3.start();
+                    BufferedReader reader3 = new BufferedReader(new InputStreamReader(process3.getInputStream()));
+                    while ((line = reader3.readLine()) != null) {
+                        System.out.println("[Config Update] " + line);
+                    }
+                    int exitCode3 = process3.waitFor();
+                    
+                    Platform.runLater(() -> {
+                        saveBtn.setDisable(false);
+                        
+                        if (exitCode1 == 0 && exitCode2 == 0 && exitCode3 == 0) {
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle("저장");
+                            alert.setHeaderText("설정이 저장되었습니다.");
+                            alert.setContentText(String.format("자동 신고 활성화: %s\n송신 번호: %s\n수신 번호: %s",
+                                autoReportEnabled ? "예" : "아니오", fromPhone, toPhone));
+                            alert.showAndWait();
+                        } else {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("오류");
+                            alert.setHeaderText("설정 저장 실패");
+                            alert.setContentText("config.py 업데이트에 실패했습니다.");
+                            alert.showAndWait();
+                        }
+                    });
+                } catch (Exception ex) {
+                    Platform.runLater(() -> {
+                        saveBtn.setDisable(false);
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("오류");
+                        alert.setHeaderText("설정 저장 실패");
+                        alert.setContentText("오류: " + ex.getMessage());
+                        alert.showAndWait();
+                    });
+                }
+            });
+        });
+        
+        content.getChildren().addAll(backBtn, title, autoReportCheck, separator1,
+            fromPhoneLabel, fromPhoneField, toPhoneLabel, toPhoneField, separator2,
+            systemLabel, clearLogsBtn, saveBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         
