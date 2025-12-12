@@ -127,6 +127,7 @@ class DataBridge:
                 response_requested = True
                 response_message = report_status.get('message', 'Touch screen to cancel report')
                 response_remaining_time = report_status.get('remaining_time', 0.0)
+                print(f"[DataBridge] Response requested: {response_requested}, message: {response_message}, remaining: {response_remaining_time}")
         
         data = {
             "connection_status": connection_status,

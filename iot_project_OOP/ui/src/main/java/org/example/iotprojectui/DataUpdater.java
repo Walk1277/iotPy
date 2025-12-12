@@ -47,8 +47,12 @@ public class DataUpdater {
             boolean showSpeakerPopup = drowsinessJson.has("show_speaker_popup") && drowsinessJson.get("show_speaker_popup").asBoolean();
             double alarmDuration = drowsinessJson.has("alarm_duration") ? drowsinessJson.get("alarm_duration").asDouble() : 0.0;
             
-            // Check if speaker popup should be shown
-            if (showSpeakerPopup && alarmOn) {
+            // Check if accident response modal is showing (higher priority)
+            // Don't show speaker popup if accident response modal is active
+            boolean accidentModalActive = mainScreenController.isResponseRequestModalActive();
+            
+            // Check if speaker popup should be shown (only if accident modal is not active)
+            if (showSpeakerPopup && alarmOn && !accidentModalActive) {
                 mainScreenController.showSpeakerStopAlert(alarmDuration);
             } else if (!alarmOn) {
                 // Reset alert flag when alarm is off
@@ -93,11 +97,19 @@ public class DataUpdater {
         // Check for response request
         boolean responseRequested = statusJson.has("response_requested") && statusJson.get("response_requested").asBoolean();
         
+        // Debug: Print response request status
         if (responseRequested) {
-            // Show response request modal
+            System.out.println("[DataUpdater] Response requested detected in status.json");
+        }
+        
+        if (responseRequested) {
+            // Show response request modal (higher priority - hide speaker alert if showing)
             String message = statusJson.has("response_message") ? statusJson.get("response_message").asText() : "Touch screen to cancel report";
             double remainingTime = statusJson.has("response_remaining_time") ? statusJson.get("response_remaining_time").asDouble() : 10.0;
             
+            System.out.println("[DataUpdater] Showing response modal - message: " + message + ", remaining: " + remainingTime);
+            // Hide speaker alert if it's showing (accident response has higher priority)
+            mainScreenController.hideSpeakerAlertIfShowing();
             mainScreenController.updateResponseRequestModal(message, remainingTime);
             mainScreenController.updateAccidentStatus("Response Required!", "#ff5722");
         } else {

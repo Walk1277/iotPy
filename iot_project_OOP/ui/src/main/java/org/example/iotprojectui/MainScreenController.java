@@ -281,6 +281,7 @@ public class MainScreenController {
     
     public void showResponseRequestModal(String message, double remainingTime) {
         Platform.runLater(() -> {
+            System.out.println("[MainScreenController] showResponseRequestModal called - message: " + message + ", remaining: " + remainingTime);
             // Remove existing modal if any
             hideResponseRequestModal();
             
@@ -293,6 +294,7 @@ public class MainScreenController {
             
             // Add modal on top of everything
             mainContainer.getChildren().add(responseModal);
+            System.out.println("[MainScreenController] Response modal added to container. Children count: " + mainContainer.getChildren().size());
         });
     }
     
@@ -349,6 +351,24 @@ public class MainScreenController {
     
     public void resetSpeakerAlertFlag() {
         speakerAlertShown = false;
+    }
+    
+    public boolean isResponseRequestModalActive() {
+        return responseModal != null;
+    }
+    
+    public void hideSpeakerAlertIfShowing() {
+        Platform.runLater(() -> {
+            // If speaker alert is showing, we can't directly close it
+            // But we can reset the flag so it won't show again
+            // The alert will close when user clicks OK
+            if (speakerAlertShown) {
+                System.out.println("[MainScreenController] Speaker alert is showing, but accident modal has higher priority");
+                // Note: JavaFX Alert.showAndWait() is blocking, so we can't close it programmatically
+                // The user will need to close it first, but we prevent new ones from showing
+                speakerAlertShown = true; // Keep flag true to prevent new alerts
+            }
+        });
     }
     
     private void writeStopSpeakerRequest() {

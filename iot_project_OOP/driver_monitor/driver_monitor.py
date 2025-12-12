@@ -301,6 +301,10 @@ class DriverMonitor:
                 keyboard_input=user_input
             )
             
+            # Debug: Print report status if ALERT
+            if report_status and report_status.get('status') == 'ALERT':
+                print(f"[DriverMonitor] Report status ALERT: {report_status}")
+            
             # Update system status for UI
             self.data_bridge.update_system_status(
                 accel_data=accel_data,
