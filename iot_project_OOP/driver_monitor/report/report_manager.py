@@ -2,6 +2,7 @@
 import datetime
 import sys
 import os
+import importlib
 
 # Add project root to Python path (Raspberry Pi compatibility)
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,7 +18,8 @@ from config import (
     SMS_API_SECRET,
     SMS_FROM_NUMBER,
     SMS_TO_NUMBER,
-    SMS_ENABLED
+    SMS_ENABLED,
+    AUTO_REPORT_ENABLED
 )
 from driver_monitor.logging_system.event_logger import EventLogger
 
@@ -185,6 +187,14 @@ class ReportManager:
                 self.user_responded = False
             self.eyes_closed_start_time = None
             self.no_face_start_time = None
+            return {'status': 'NORMAL', 'message': '', 'remaining_time': 0}
+        
+        # Check if auto report is enabled
+        import config
+        importlib.reload(config)
+        auto_report_enabled = getattr(config, 'AUTO_REPORT_ENABLED', True)
+        
+        if not auto_report_enabled:
             return {'status': 'NORMAL', 'message': '', 'remaining_time': 0}
         
         # Within monitoring period - check conditions

@@ -29,7 +29,9 @@ application {
 }
 
 javafx {
-    version = "21.0.6"
+    // Use version 17.0.2 for ARM (Raspberry Pi) compatibility
+    // JavaFX 21.x does not have ARM builds in Maven Central
+    version = "17.0.2"
     // Only include modules that are actually used
     // javafx.web, javafx.media, javafx.swing are not available on all platforms
     modules = listOf("javafx.controls", "javafx.fxml")

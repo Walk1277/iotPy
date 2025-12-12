@@ -13,7 +13,8 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from config import EAR_THRESHOLD, LOG_FILE
+from config import LOG_FILE
+import importlib
 
 
 class DataBridge:
@@ -73,9 +74,14 @@ class DataBridge:
             else:
                 state = "no_face"
         
+        # Load current threshold dynamically
+        import config
+        importlib.reload(config)
+        current_threshold = config.EAR_THRESHOLD
+        
         data = {
             "ear": ear if ear is not None else 0.0,
-            "threshold": EAR_THRESHOLD,
+            "threshold": current_threshold,
             "state": state,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "face_detected": face_detected,
@@ -154,32 +160,46 @@ class DataBridge:
                     }
                 }
             else:
-                # Count events
-                drowsiness_count = len(df[df['EventType'] == 'drowsiness'])
-                sudden_accel_count = len(df[df['EventType'] == 'sudden acceleration'])
-                sudden_stop_count = len(df[df['EventType'] == 'sudden stop'])
+                # Filter only actual driving events (exclude system events like "Start program", "program quit", etc.)
+                valid_event_types = ['drowsiness', 'sudden acceleration', 'sudden stop']
+                df_driving = df[df['EventType'].isin(valid_event_types)]
                 
-                # Calculate daily scores (simplified: 100 - (events * 5))
+                # Count events
+                drowsiness_count = len(df_driving[df_driving['EventType'] == 'drowsiness'])
+                sudden_accel_count = len(df_driving[df_driving['EventType'] == 'sudden acceleration'])
+                sudden_stop_count = len(df_driving[df_driving['EventType'] == 'sudden stop'])
+                
+                # Calculate scores: Start from 100 and deduct points for each event
+                # Each event deducts 5 points (can be adjusted)
+                total_events = len(df_driving)  # Only count actual driving events
+                base_score = 100
+                deduction_per_event = 5
+                
+                # Calculate monthly score: 100 - (total_events * deduction_per_event)
+                monthly_score = max(0, base_score - (total_events * deduction_per_event))
+                
+                # Calculate daily scores: Start from 100 for each day, deduct for events
                 daily_scores = []
-                total_score = 0
-                day_count = 0
-                for date in df['Timestamp'].dt.date.unique():
-                    day_events = df[df['Timestamp'].dt.date == date]
+                for date in df_driving['Timestamp'].dt.date.unique():
+                    day_events = df_driving[df_driving['Timestamp'].dt.date == date]
                     event_count = len(day_events)
-                    score = max(0, 100 - (event_count * 5))
+                    # Each day starts at 100, deducts points for events
+                    day_score = max(0, base_score - (event_count * deduction_per_event))
                     daily_scores.append({
                         "date": date.strftime("%Y-%m-%d"),
-                        "score": score,
+                        "score": day_score,
                         "day": date.day
                     })
-                    total_score += score
-                    day_count += 1
                 
-                # Calculate monthly score (average of daily scores)
-                monthly_score = int(total_score / day_count) if day_count > 0 else 100
+                # Count report events (for logging)
+                report_events = df[df['EventType'].str.contains('report', case=False, na=False)]
+                report_triggered_count = len(report_events[report_events['EventType'].str.contains('report_triggered', case=False, na=False)])
+                report_cancelled_count = len(report_events[report_events['EventType'].str.contains('report_cancelled', case=False, na=False)])
+                report_alert_count = len(report_events[report_events['EventType'].str.contains('report_alert_triggered', case=False, na=False)])
+                sms_sent_count = len(report_events[report_events['EventType'].str.contains('sms_report_sent', case=False, na=False)])
                 
                 summary = {
-                    "total_events": len(df),
+                    "total_events": len(df_driving),  # Only count actual driving events
                     "drowsiness_count": int(drowsiness_count),
                     "sudden_acceleration_count": int(sudden_accel_count),
                     "sudden_stop_count": int(sudden_stop_count),
@@ -189,6 +209,12 @@ class DataBridge:
                         "sudden_stop": int(sudden_stop_count),
                         "sudden_acceleration": int(sudden_accel_count),
                         "drowsiness": int(drowsiness_count)
+                    },
+                    "report_stats": {
+                        "alert_triggered": int(report_alert_count),
+                        "report_triggered": int(report_triggered_count),
+                        "report_cancelled": int(report_cancelled_count),
+                        "sms_sent": int(sms_sent_count)
                     }
                 }
             

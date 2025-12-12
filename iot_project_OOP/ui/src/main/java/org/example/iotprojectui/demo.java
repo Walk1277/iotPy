@@ -769,15 +769,94 @@ public class demo extends Application {
         Label phoneLabel = new Label("전화번호:");
         TextField phoneField = new TextField("010-0000-0000");
         
+        Separator separator1 = new Separator();
+        
+        Label autoReportLabel = new Label("자동 신고 설정");
+        autoReportLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        
+        CheckBox autoReportCheck = new CheckBox("자동 신고 활성화");
+        autoReportCheck.setSelected(true);
+        
         Button saveBtn = new Button("저장");
         saveBtn.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("저장");
-            alert.setHeaderText("설정이 저장되었습니다.");
-            alert.showAndWait();
+            boolean autoReportEnabled = autoReportCheck.isSelected();
+            
+            // Save auto report setting
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String projectDir = System.getProperty("user.dir");
+                    if (projectDir.contains("ui")) {
+                        projectDir = new java.io.File(projectDir).getParent();
+                    }
+                    
+                    String[] pythonPaths = {"python3", "python"};
+                    String pythonCmd = "python3";
+                    for (String path : pythonPaths) {
+                        try {
+                            Process testProcess = new ProcessBuilder(path, "--version").start();
+                            if (testProcess.waitFor() == 0) {
+                                pythonCmd = path;
+                                break;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    
+                    String scriptPath = projectDir + "/update_config.py";
+                    java.io.File scriptFile = new java.io.File(scriptPath);
+                    
+                    if (!scriptFile.exists()) {
+                        String altPath = "/home/pi/iot_project_OOP/update_config.py";
+                        if (new java.io.File(altPath).exists()) {
+                            scriptPath = altPath;
+                            projectDir = "/home/pi/iot_project_OOP";
+                        }
+                    }
+                    
+                    ProcessBuilder pb = new ProcessBuilder(
+                        pythonCmd,
+                        scriptPath,
+                        "AUTO_REPORT_ENABLED",
+                        String.valueOf(autoReportEnabled)
+                    );
+                    pb.directory(new java.io.File(projectDir));
+                    Process process = pb.start();
+                    
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println("[Config Update] " + line);
+                    }
+                    
+                    int exitCode = process.waitFor();
+                    Platform.runLater(() -> {
+                        if (exitCode == 0) {
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle("저장");
+                            alert.setHeaderText("설정이 저장되었습니다.");
+                            alert.setContentText("자동 신고 활성화: " + (autoReportEnabled ? "예" : "아니오"));
+                            alert.showAndWait();
+                        } else {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("오류");
+                            alert.setHeaderText("설정 저장 실패");
+                            alert.setContentText("config.py 업데이트에 실패했습니다.");
+                            alert.showAndWait();
+                        }
+                    });
+                } catch (Exception ex) {
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("오류");
+                        alert.setHeaderText("설정 저장 실패");
+                        alert.setContentText("오류: " + ex.getMessage());
+                        alert.showAndWait();
+                    });
+                }
+            });
         });
         
-        content.getChildren().addAll(backBtn, title, nameLabel, nameField, phoneLabel, phoneField, saveBtn);
+        content.getChildren().addAll(backBtn, title, nameLabel, nameField, phoneLabel, phoneField, 
+            separator1, autoReportLabel, autoReportCheck, saveBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         
@@ -814,11 +893,15 @@ public class demo extends Application {
         CheckBox alarmCheck = new CheckBox("알람 활성화");
         alarmCheck.setSelected(true);
         
+        CheckBox autoReportCheck = new CheckBox("자동 신고 활성화");
+        autoReportCheck.setSelected(true);
+        
         Button saveBtn = new Button("저장");
         saveBtn.setOnAction(e -> {
-            // Save threshold to config.py
+            // Save threshold and auto report settings to config.py
             double thresholdValue = thresholdSlider.getValue();
             boolean alarmEnabled = alarmCheck.isSelected();
+            boolean autoReportEnabled = autoReportCheck.isSelected();
             
             // Run Python script to update config
             CompletableFuture.runAsync(() -> {
@@ -855,28 +938,46 @@ public class demo extends Application {
                         }
                     }
                     
-                    ProcessBuilder pb = new ProcessBuilder(
+                    // Update EAR_THRESHOLD
+                    ProcessBuilder pb1 = new ProcessBuilder(
                         pythonCmd,
                         scriptPath,
                         "EAR_THRESHOLD",
                         String.valueOf(thresholdValue)
                     );
-                    pb.directory(new java.io.File(projectDir));
-                    Process process = pb.start();
+                    pb1.directory(new java.io.File(projectDir));
+                    Process process1 = pb1.start();
                     
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    BufferedReader reader1 = new BufferedReader(new InputStreamReader(process1.getInputStream()));
                     String line;
-                    while ((line = reader.readLine()) != null) {
+                    while ((line = reader1.readLine()) != null) {
                         System.out.println("[Config Update] " + line);
                     }
+                    int exitCode1 = process1.waitFor();
                     
-                    int exitCode = process.waitFor();
+                    // Update AUTO_REPORT_ENABLED
+                    ProcessBuilder pb2 = new ProcessBuilder(
+                        pythonCmd,
+                        scriptPath,
+                        "AUTO_REPORT_ENABLED",
+                        String.valueOf(autoReportEnabled)
+                    );
+                    pb2.directory(new java.io.File(projectDir));
+                    Process process2 = pb2.start();
+                    
+                    BufferedReader reader2 = new BufferedReader(new InputStreamReader(process2.getInputStream()));
+                    while ((line = reader2.readLine()) != null) {
+                        System.out.println("[Config Update] " + line);
+                    }
+                    int exitCode2 = process2.waitFor();
+                    
                     Platform.runLater(() -> {
-                        if (exitCode == 0) {
+                        if (exitCode1 == 0 && exitCode2 == 0) {
                             Alert alert = new Alert(Alert.AlertType.INFORMATION);
                             alert.setTitle("저장");
                             alert.setHeaderText("설정이 저장되었습니다.");
-                            alert.setContentText(String.format("임계값: %.2f\n알람 활성화: %s", thresholdValue, alarmEnabled ? "예" : "아니오"));
+                            alert.setContentText(String.format("임계값: %.2f\n알람 활성화: %s\n자동 신고 활성화: %s", 
+                                thresholdValue, alarmEnabled ? "예" : "아니오", autoReportEnabled ? "예" : "아니오"));
                             alert.showAndWait();
                         } else {
                             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -898,7 +999,7 @@ public class demo extends Application {
             });
         });
         
-        content.getChildren().addAll(backBtn, title, thresholdLabel, thresholdSlider, alarmCheck, saveBtn);
+        content.getChildren().addAll(backBtn, title, thresholdLabel, thresholdSlider, alarmCheck, autoReportCheck, saveBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         
@@ -927,10 +1028,105 @@ public class demo extends Application {
         logArea.setStyle("-fx-font-size: 11px;");
         loadLogs(logArea);
         
+        HBox buttonBox = new HBox(10);
+        buttonBox.setAlignment(Pos.CENTER);
+        
         Button refreshBtn = new Button("새로고침");
         refreshBtn.setOnAction(e -> loadLogs(logArea));
         
-        content.getChildren().addAll(backBtn, title, logArea, refreshBtn);
+        Button clearBtn = new Button("로그 초기화");
+        clearBtn.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white;");
+        clearBtn.setOnAction(e -> {
+            Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmAlert.setTitle("로그 초기화");
+            confirmAlert.setHeaderText("로그를 초기화하시겠습니까?");
+            confirmAlert.setContentText("모든 운전 이벤트 로그가 삭제되고 점수가 100점으로 초기화됩니다.\n이 작업은 되돌릴 수 없습니다.");
+            
+            confirmAlert.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
+                    clearBtn.setDisable(true);
+                    refreshBtn.setDisable(true);
+                    
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            String projectDir = System.getProperty("user.dir");
+                            if (projectDir.contains("ui")) {
+                                projectDir = new java.io.File(projectDir).getParent();
+                            }
+                            
+                            String[] pythonPaths = {"python3", "python"};
+                            String pythonCmd = "python3";
+                            for (String path : pythonPaths) {
+                                try {
+                                    Process testProcess = new ProcessBuilder(path, "--version").start();
+                                    if (testProcess.waitFor() == 0) {
+                                        pythonCmd = path;
+                                        break;
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+                            
+                            String scriptPath = projectDir + "/clear_logs.py";
+                            java.io.File scriptFile = new java.io.File(scriptPath);
+                            
+                            if (!scriptFile.exists()) {
+                                String altPath = "/home/pi/iot_project_OOP/clear_logs.py";
+                                if (new java.io.File(altPath).exists()) {
+                                    scriptPath = altPath;
+                                    projectDir = "/home/pi/iot_project_OOP";
+                                }
+                            }
+                            
+                            ProcessBuilder pb = new ProcessBuilder(pythonCmd, scriptPath);
+                            pb.directory(new java.io.File(projectDir));
+                            Process process = pb.start();
+                            
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                            String line;
+                            StringBuilder output = new StringBuilder();
+                            while ((line = reader.readLine()) != null) {
+                                output.append(line).append("\n");
+                                System.out.println("[Clear Logs] " + line);
+                            }
+                            
+                            int exitCode = process.waitFor();
+                            Platform.runLater(() -> {
+                                clearBtn.setDisable(false);
+                                refreshBtn.setDisable(false);
+                                
+                                if (exitCode == 0) {
+                                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                                    successAlert.setTitle("완료");
+                                    successAlert.setHeaderText("로그가 초기화되었습니다.");
+                                    successAlert.setContentText("모든 운전 이벤트 로그가 삭제되고 점수가 100점으로 초기화되었습니다.");
+                                    successAlert.showAndWait();
+                                    loadLogs(logArea);  // Refresh log display
+                                } else {
+                                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                                    errorAlert.setTitle("오류");
+                                    errorAlert.setHeaderText("로그 초기화 실패");
+                                    errorAlert.setContentText("로그 파일을 초기화하는 중 오류가 발생했습니다.");
+                                    errorAlert.showAndWait();
+                                }
+                            });
+                        } catch (Exception ex) {
+                            Platform.runLater(() -> {
+                                clearBtn.setDisable(false);
+                                refreshBtn.setDisable(false);
+                                Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                                errorAlert.setTitle("오류");
+                                errorAlert.setHeaderText("로그 초기화 실패");
+                                errorAlert.setContentText("오류: " + ex.getMessage());
+                                errorAlert.showAndWait();
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        
+        buttonBox.getChildren().addAll(refreshBtn, clearBtn);
+        content.getChildren().addAll(backBtn, title, logArea, buttonBox);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         
@@ -972,6 +1168,23 @@ public class demo extends Application {
                 }
                 if (events.has("drowsiness")) {
                     logText.append("  졸음: ").append(events.get("drowsiness").asInt()).append("회\n");
+                }
+            }
+            
+            if (logSummary.has("report_stats")) {
+                com.fasterxml.jackson.databind.JsonNode reportStats = logSummary.get("report_stats");
+                logText.append("\n자동 신고 통계:\n");
+                if (reportStats.has("alert_triggered")) {
+                    logText.append("  경고 발생: ").append(reportStats.get("alert_triggered").asInt()).append("회\n");
+                }
+                if (reportStats.has("report_triggered")) {
+                    logText.append("  신고 실행: ").append(reportStats.get("report_triggered").asInt()).append("회\n");
+                }
+                if (reportStats.has("report_cancelled")) {
+                    logText.append("  신고 취소: ").append(reportStats.get("report_cancelled").asInt()).append("회\n");
+                }
+                if (reportStats.has("sms_sent")) {
+                    logText.append("  SMS 발송: ").append(reportStats.get("sms_sent").asInt()).append("회\n");
                 }
             }
         } else {

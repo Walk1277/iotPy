@@ -3,13 +3,14 @@ import mediapipe as mp
 import cv2
 import sys
 import os
+import importlib
 
 # Add project root to Python path (Raspberry Pi compatibility)
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from config import LEFT_EYE_IDXS, RIGHT_EYE_IDXS, EAR_THRESHOLD, CONSEC_FRAMES
+from config import LEFT_EYE_IDXS, RIGHT_EYE_IDXS, CONSEC_FRAMES
 
 mp_facemesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
@@ -24,6 +25,23 @@ class FatigueDetector:
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5,
         )
+        # Load EAR_THRESHOLD dynamically
+        self._load_threshold()
+    
+    def _load_threshold(self):
+        """Load EAR_THRESHOLD from config.py dynamically."""
+        try:
+            import config
+            importlib.reload(config)  # Reload config to get latest values
+            self.ear_threshold = config.EAR_THRESHOLD
+        except Exception as e:
+            # Fallback to default if reload fails
+            print(f"[FatigueDetector] Warning: Could not reload config: {e}")
+            try:
+                import config
+                self.ear_threshold = config.EAR_THRESHOLD
+            except:
+                self.ear_threshold = 0.4  # Default fallback
 
     def _distance(self, p1, p2):
         return ((p1[0]-p2[0]) ** 2 + (p1[1]-p2[1]) ** 2) ** 0.5
@@ -56,8 +74,11 @@ class FatigueDetector:
         right_ear, right_pts = self._get_ear(lm, RIGHT_EYE_IDXS, imgW, imgH)
         ear = (left_ear + right_ear) / 2
 
+        # Reload threshold from config (to support runtime updates)
+        self._load_threshold()
+        
         alarm = False
-        if ear < EAR_THRESHOLD:
+        if ear < self.ear_threshold:
             self.counter += 1
             if self.counter >= CONSEC_FRAMES:
                 alarm = True

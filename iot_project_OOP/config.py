@@ -1,6 +1,6 @@
 # config.py
 
-EAR_THRESHOLD = 0.20
+EAR_THRESHOLD = 0.200188679245283
 CONSEC_FRAMES = 30
 
 ACCEL_THRESHOLD = 4.0
@@ -21,16 +21,17 @@ REPORT_IMPACT_MONITORING_DURATION = 60.0  # Monitor for 1 minute after last impa
 REPORT_EYES_CLOSED_DURATION = 10.0  # seconds of eyes closed (low EAR)
 REPORT_NO_FACE_DURATION = 10.0  # seconds of no face detection
 REPORT_RESPONSE_TIMEOUT = 10.0  # seconds to wait for user response
+AUTO_REPORT_ENABLED = True
 
 # SMS report settings (SOLAPI)
 SMS_API_KEY = "NCSAQFYKNA3STO4Y"  # Replace with your SOLAPI API key
 SMS_API_SECRET = "AGRKNIE1BS6VKQQCXYACG6Z9HAW1XKXA"  # Replace with your SOLAPI API secret
 SMS_FROM_NUMBER = "010-7220-5917"  # Replace with your registered sender number
 SMS_TO_NUMBER = "010-4090-7445"  # Replace with recipient number
-SMS_ENABLED = False  # Set to True to enable SMS reporting
+SMS_ENABLED = True  # Set to True to enable SMS reporting
 
 # GPS settings
-GPS_ENABLED = False  # Set to True to enable GPS module
+GPS_ENABLED = True  # Set to True to enable GPS module
 GPS_SERIAL_PORT = "/dev/ttyUSB0"  # GPS serial port (Raspberry Pi)
 GPS_BAUD_RATE = 9600  # GPS baud rate
 

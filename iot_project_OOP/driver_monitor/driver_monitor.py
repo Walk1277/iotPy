@@ -3,6 +3,7 @@ import cv2
 import datetime
 import sys
 import os
+import importlib
 
 # Add project root to Python path (Raspberry Pi compatibility)
 # May already be added by main.py, but prepare for direct execution
@@ -37,7 +38,8 @@ except ImportError:
     from driver_monitor.data_bridge import DataBridge
 
 # Use absolute import for config at project root
-from config import EAR_THRESHOLD
+# Note: EAR_THRESHOLD is now loaded dynamically in FatigueDetector
+import config
 
 
 class DriverMonitor:
@@ -110,8 +112,6 @@ class DriverMonitor:
             else:
                 left_pts, right_pts = None, None
             alarm_on = analyze_result[3]
-
-            prev_alarm_on = alarm_on
             
             # Update UI data bridge
             self.data_bridge.update_drowsiness_status(
@@ -123,13 +123,20 @@ class DriverMonitor:
             # =========================================
             # 3) Drowsiness alarm handling
             # =========================================
+            # Check if alarm state changed (from off to on)
+            if alarm_on and not prev_alarm_on:
+                # Alarm just turned on - log the drowsiness event
+                self.logger.log("drowsiness")
+                print(f"[DriverMonitor] Drowsiness detected and logged. EAR: {ear:.3f}")
+            
             if alarm_on:
-                if not prev_alarm_on:
-                    self.logger.log("drowsiness")
                 self.speaker.alarm_on()
             else:
                 if prev_alarm_on:
                     self.speaker.alarm_off()
+            
+            # Update prev_alarm_on AFTER checking state change
+            prev_alarm_on = alarm_on
 
             # =========================================
             # 4) Frame overlay rendering
@@ -199,10 +206,14 @@ class DriverMonitor:
             # =========================================
             # Update report manager (initial check without keyboard input)
             # Pass EAR and threshold for eyes closed detection
+            # Get current threshold from config (supports runtime updates)
+            importlib.reload(config)
+            current_threshold = config.EAR_THRESHOLD
+            
             report_status = self.report_manager.update(
                 face_detected=face_detected,
                 ear=ear if face_detected else None,
-                ear_threshold=EAR_THRESHOLD,
+                ear_threshold=current_threshold,
                 keyboard_input=None
             )
             
@@ -270,18 +281,28 @@ class DriverMonitor:
             # ============================
             # 6) Display and keyboard input
             # ============================
-            cv2.imshow("Drowsiness Monitor", frame)
-            key = cv2.waitKey(1) & 0xFF
+            # Only show window if SHOW_MONITOR_WINDOW environment variable is set
+            # On Raspberry Pi, UI is shown separately, so we don't need this window
+            if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
+                cv2.imshow("Drowsiness Monitor", frame)
+                key = cv2.waitKey(1) & 0xFF
+            else:
+                # No window display - just process keyboard input from stdin if available
+                key = 0
 
             # Handle keyboard input for report system and quit
             if report_status['status'] == 'ALERT' and key != 255 and key != 0:
                 # Any key pressed during alert cancels report
                 keyboard_input = chr(key) if key != 255 and key != 0 else None
                 if keyboard_input:
+                    # Get current threshold from config (supports runtime updates)
+                    importlib.reload(config)
+                    current_threshold = config.EAR_THRESHOLD
+                    
                     report_status = self.report_manager.update(
                         face_detected=face_detected,
                         ear=ear if face_detected else None,
-                        ear_threshold=EAR_THRESHOLD,
+                        ear_threshold=current_threshold,
                         keyboard_input=keyboard_input
                     )
                     if report_status['status'] == 'NORMAL':
@@ -296,5 +317,7 @@ class DriverMonitor:
         self.logger.log("program quit")
         self.camera.release()
         self.speaker.cleanup()
-        cv2.destroyAllWindows()
+        # Only destroy windows if they were created
+        if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
+            cv2.destroyAllWindows()
 
