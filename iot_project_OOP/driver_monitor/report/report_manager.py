@@ -91,7 +91,9 @@ class ReportManager:
         self.eyes_closed_start_time = None
         self.no_face_start_time = None
         self.sms_sent = False  # Reset SMS flag for new impact
+        print(f"[Report] ===== IMPACT REGISTERED =====")
         print(f"[Report] Impact registered at {impact_time.strftime('%H:%M:%S')}. Monitoring for {REPORT_IMPACT_MONITORING_DURATION}s.")
+        print(f"[Report] Will check for: eyes closed >= {REPORT_EYES_CLOSED_DURATION}s OR no face >= {REPORT_NO_FACE_DURATION}s")
 
     def is_within_monitoring_period(self):
         """
@@ -150,13 +152,16 @@ class ReportManager:
         if not face_detected:
             if self.no_face_start_time is None:
                 self.no_face_start_time = datetime.datetime.now()
+                print(f"[Report] No face detected, starting timer")
             
             elapsed = (datetime.datetime.now() - self.no_face_start_time).total_seconds()
             if elapsed >= REPORT_NO_FACE_DURATION:
+                print(f"[Report] No face for {elapsed:.1f}s >= {REPORT_NO_FACE_DURATION}s - CONDITION MET!")
                 return True
         else:
             # Reset if face is detected
-            self.no_face_start_time = None
+            if self.no_face_start_time is not None:
+                self.no_face_start_time = None
         
         return False
 
@@ -209,6 +214,12 @@ class ReportManager:
         # Within monitoring period - check conditions
         eyes_closed_condition = self.check_eyes_closed(face_detected, ear, ear_threshold)
         no_face_condition = self.check_no_face(face_detected)
+        
+        # Debug: Log condition checks
+        if self.last_impact_time:
+            elapsed_since_impact = (now - self.last_impact_time).total_seconds()
+            if elapsed_since_impact < 5.0:  # Only log frequently in first 5 seconds
+                print(f"[Report] Monitoring: elapsed={elapsed_since_impact:.1f}s, eyes_closed={eyes_closed_condition}, no_face={no_face_condition}, face_detected={face_detected}, ear={ear:.3f if ear else None}")
         
         # Either condition met - enter report mode
         if (eyes_closed_condition or no_face_condition) and not self.report_mode:
