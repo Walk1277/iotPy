@@ -14,13 +14,13 @@ public class JsonDataLoader {
         try {
             File file = new File(path);
             if (!file.exists()) {
-                System.out.println("[WARN] JSON 파일이 존재하지 않습니다: " + path);
+                System.out.println("[WARN] JSON file does not exist: " + path);
                 return null;
             }
             return mapper.readTree(file);
 
         } catch (IOException e) {
-            System.out.println("[ERROR] JSON 파싱 실패: " + e.getMessage());
+            System.out.println("[ERROR] JSON parsing failed: " + e.getMessage());
             return null;
         }
     }

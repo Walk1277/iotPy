@@ -53,7 +53,7 @@ public class DrowsinessUI extends Application {
         stage.setScene(scene);
         stage.show();
 
-        // 1초마다 JSON 읽기
+        // Read JSON every second
         Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> updateFromJson()));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();

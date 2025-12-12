@@ -28,20 +28,20 @@ def check_camera():
             camera.release()
             return {
                 "status": "OK",
-                "message": f"카메라 정상 작동 (해상도: {width}x{height})",
-                "details": f"프레임 캡처 성공"
+                "message": f"Camera working normally (Resolution: {width}x{height})",
+                "details": f"Frame capture successful"
             }
         else:
             camera.release()
             return {
                 "status": "ERROR",
-                "message": "카메라 프레임 캡처 실패",
-                "details": "프레임을 읽을 수 없습니다"
+                "message": "Camera frame capture failed",
+                "details": "Cannot read frame"
             }
     except Exception as e:
         return {
             "status": "ERROR",
-            "message": "카메라 초기화 실패",
+            "message": "Camera initialization failed",
             "details": str(e)
         }
 
@@ -55,8 +55,8 @@ def check_accelerometer():
         if accel.accel is None:
             return {
                 "status": "WARNING",
-                "message": "가속도 센서가 연결되지 않음",
-                "details": "라즈베리파이 환경이 아니거나 ADXL345가 연결되지 않았습니다"
+                "message": "Accelerometer sensor not connected",
+                "details": "Not on Raspberry Pi environment or ADXL345 is not connected"
             }
         
         # Try to read accelerometer data
@@ -65,19 +65,19 @@ def check_accelerometer():
             x, y, z = accel_data
             return {
                 "status": "OK",
-                "message": "가속도 센서 정상 작동",
+                "message": "Accelerometer sensor working normally",
                 "details": f"X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f} m/s²"
             }
         else:
             return {
                 "status": "ERROR",
-                "message": "가속도 센서 데이터 읽기 실패",
-                "details": "센서에서 데이터를 읽을 수 없습니다"
+                "message": "Failed to read accelerometer data",
+                "details": "Cannot read data from sensor"
             }
     except Exception as e:
         return {
             "status": "ERROR",
-            "message": "가속도 센서 초기화 실패",
+            "message": "Accelerometer sensor initialization failed",
             "details": str(e)
         }
 
@@ -97,15 +97,15 @@ def check_gps():
         if gps.simulate:
             return {
                 "status": "WARNING",
-                "message": "GPS 시뮬레이션 모드",
-                "details": "실제 GPS 모듈이 연결되지 않았거나 GPS_ENABLED가 False입니다. config.py에서 GPS_ENABLED를 True로 설정하세요."
+                "message": "GPS Simulation Mode",
+                "details": "No real GPS module connected or GPS_ENABLED is False. Set GPS_ENABLED to True in config.py."
             }
         
         if not gps.is_valid:
             return {
                 "status": "ERROR",
-                "message": "GPS 초기화 실패",
-                "details": "GPS 모듈을 초기화할 수 없습니다"
+                "message": "GPS initialization failed",
+                "details": "Cannot initialize GPS module"
             }
         
         # Try to read GPS data multiple times to check for real signal
@@ -137,8 +137,8 @@ def check_gps():
             latest = positions[-1]
             return {
                 "status": "OK",
-                "message": "GPS 정상 작동 (실제 신호 수신)",
-                "details": f"위도: {latest[0]:.6f}, 경도: {latest[1]:.6f}"
+                "message": "GPS working normally (real signal received)",
+                "details": f"Latitude: {latest[0]:.6f}, Longitude: {latest[1]:.6f}"
             }
         elif len(positions) > 0:
             # Got position but might be simulation or fixed position
@@ -146,25 +146,25 @@ def check_gps():
             if abs(latest[0] - default_sim_lat) < 0.001 and abs(latest[1] - default_sim_lon) < 0.001:
                 return {
                     "status": "WARNING",
-                    "message": "GPS 시뮬레이션 데이터 감지",
-                    "details": f"위치: {latest[0]:.6f}, {latest[1]:.6f} (기본 시뮬레이션 위치입니다. 실제 GPS 모듈을 연결하세요)"
+                    "message": "GPS simulation data detected",
+                    "details": f"Position: {latest[0]:.6f}, {latest[1]:.6f} (default simulation position. Please connect a real GPS module)"
                 }
             else:
                 return {
                     "status": "WARNING",
-                    "message": "GPS 신호 수신 중",
-                    "details": f"위치: {latest[0]:.6f}, {latest[1]:.6f} (위성 신호 확인 중)"
+                    "message": "GPS signal receiving",
+                    "details": f"Position: {latest[0]:.6f}, {latest[1]:.6f} (checking satellite signal)"
                 }
         else:
             return {
                 "status": "ERROR",
-                "message": "GPS 신호 수신 실패",
-                "details": "GPS 모듈에서 위치 데이터를 받을 수 없습니다. GPS 모듈이 연결되어 있고 안테나가 외부에 노출되어 있는지 확인하세요."
+                "message": "GPS signal reception failed",
+                "details": "Cannot receive position data from GPS module. Please ensure the GPS module is connected and the antenna is exposed to the outside."
             }
     except Exception as e:
         return {
             "status": "ERROR",
-            "message": "GPS 체크 실패",
+            "message": "GPS check failed",
             "details": str(e)
         }
 
@@ -184,20 +184,20 @@ def check_speaker():
             speaker.cleanup()
             return {
                 "status": "OK",
-                "message": "스피커 정상 작동",
-                "details": "테스트 알람 재생 성공"
+                "message": "Speaker working normally",
+                "details": "Test alarm playback successful"
             }
         except Exception as e:
             speaker.cleanup()
             return {
                 "status": "WARNING",
-                "message": "스피커 테스트 실패",
+                "message": "Speaker test failed",
                 "details": str(e)
             }
     except Exception as e:
         return {
             "status": "ERROR",
-            "message": "스피커 초기화 실패",
+            "message": "Speaker initialization failed",
             "details": str(e)
         }
 
@@ -214,15 +214,15 @@ def test_sms():
         if not config.SMS_ENABLED:
             return {
                 "status": "WARNING",
-                "message": "SMS 기능이 비활성화됨",
-                "details": "config.py에서 SMS_ENABLED를 True로 설정하세요"
+                "message": "SMS feature is disabled",
+                "details": "Set SMS_ENABLED to True in config.py"
             }
         
         if not config.SMS_FROM_NUMBER or not config.SMS_TO_NUMBER:
             return {
                 "status": "WARNING",
-                "message": "전화번호가 설정되지 않음",
-                "details": "송신 및 수신 전화번호를 설정하세요"
+                "message": "Phone numbers not set",
+                "details": "Please set sender and receiver phone numbers"
             }
         
         # Try to initialize SMS service
@@ -235,8 +235,8 @@ def test_sms():
         if report_manager.sms_service is None:
             return {
                 "status": "ERROR",
-                "message": "SMS 서비스 초기화 실패",
-                "details": "SOLAPI 라이브러리가 설치되지 않았거나 API 키가 잘못되었습니다"
+                "message": "SMS service initialization failed",
+                "details": "SOLAPI library is not installed or API key is incorrect"
             }
         
         # Test SMS sending (actually send a test message)
@@ -245,31 +245,31 @@ def test_sms():
             test_message = RequestMessage(
                 from_=config.SMS_FROM_NUMBER,
                 to=config.SMS_TO_NUMBER,
-                text=f"[시스템 테스트] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 시스템 체크 테스트 메시지입니다."
+                text=f"[System Test] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - System check test message."
             )
             
             response = report_manager.sms_service.send(test_message)
             return {
                 "status": "OK",
-                "message": "SMS 테스트 발송 성공",
-                "details": f"메시지 ID: {response.group_info.group_id}, 수신 번호: {config.SMS_TO_NUMBER}"
+                "message": "SMS test sending successful",
+                "details": f"Message ID: {response.group_info.group_id}, Receiver: {config.SMS_TO_NUMBER}"
             }
         except Exception as e:
             return {
                 "status": "ERROR",
-                "message": "SMS 발송 실패",
+                "message": "SMS sending failed",
                 "details": str(e)
             }
     except ImportError:
         return {
             "status": "ERROR",
-            "message": "SMS 라이브러리 없음",
-            "details": "solapi 라이브러리가 설치되지 않았습니다. pip3 install solapi 실행"
+            "message": "SMS library not found",
+            "details": "solapi library is not installed. Run: pip3 install solapi"
         }
     except Exception as e:
         return {
             "status": "ERROR",
-            "message": "SMS 테스트 실패",
+            "message": "SMS test failed",
             "details": str(e)
         }
 
@@ -280,30 +280,30 @@ def main():
         "checks": {}
     }
     
-    print("=== 시스템 체크 시작 ===", file=sys.stderr)
+    print("=== Starting System Check ===", file=sys.stderr)
     
     # Check camera
-    print("[1/5] 카메라 체크 중...", file=sys.stderr)
+    print("[1/5] Checking camera...", file=sys.stderr)
     results["checks"]["camera"] = check_camera()
-    print(f"카메라: {results['checks']['camera']['status']}", file=sys.stderr)
+    print(f"Camera: {results['checks']['camera']['status']}", file=sys.stderr)
     
     # Check accelerometer
-    print("[2/5] 가속도 센서 체크 중...", file=sys.stderr)
+    print("[2/5] Checking accelerometer...", file=sys.stderr)
     results["checks"]["accelerometer"] = check_accelerometer()
-    print(f"가속도 센서: {results['checks']['accelerometer']['status']}", file=sys.stderr)
+    print(f"Accelerometer: {results['checks']['accelerometer']['status']}", file=sys.stderr)
     
     # Check GPS
-    print("[3/5] GPS 체크 중...", file=sys.stderr)
+    print("[3/5] Checking GPS...", file=sys.stderr)
     results["checks"]["gps"] = check_gps()
     print(f"GPS: {results['checks']['gps']['status']}", file=sys.stderr)
     
     # Check speaker
-    print("[4/5] 스피커 체크 중...", file=sys.stderr)
+    print("[4/5] Checking speaker...", file=sys.stderr)
     results["checks"]["speaker"] = check_speaker()
-    print(f"스피커: {results['checks']['speaker']['status']}", file=sys.stderr)
+    print(f"Speaker: {results['checks']['speaker']['status']}", file=sys.stderr)
     
     # Test SMS
-    print("[5/5] SMS 테스트 중...", file=sys.stderr)
+    print("[5/5] Testing SMS...", file=sys.stderr)
     results["checks"]["sms"] = test_sms()
     print(f"SMS: {results['checks']['sms']['status']}", file=sys.stderr)
     
@@ -315,8 +315,8 @@ def main():
     warning_count = sum(1 for check in results["checks"].values() if check["status"] == "WARNING")
     error_count = sum(1 for check in results["checks"].values() if check["status"] == "ERROR")
     
-    print(f"\n=== 체크 완료 ===", file=sys.stderr)
-    print(f"정상: {ok_count}, 경고: {warning_count}, 오류: {error_count}", file=sys.stderr)
+    print(f"\n=== Check Complete ===", file=sys.stderr)
+    print(f"OK: {ok_count}, Warning: {warning_count}, Error: {error_count}", file=sys.stderr)
     
     # Exit with error code if any errors
     sys.exit(0 if error_count == 0 else 1)

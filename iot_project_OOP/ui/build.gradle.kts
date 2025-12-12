@@ -24,8 +24,8 @@ tasks.withType<JavaCompile> {
 }
 
 application {
-    // Use demo for full UI
-    mainClass.set("org.example.iotprojectui.demo")
+    // Main application entry point
+    mainClass.set("org.example.iotprojectui.MainApplication")
 }
 
 javafx {
