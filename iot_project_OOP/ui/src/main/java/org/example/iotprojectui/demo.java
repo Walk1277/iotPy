@@ -54,7 +54,7 @@ public class demo extends Application {
         
         root.setCenter(mainContainer);
         
-        Scene scene = new Scene(root, 800, 480);
+        Scene scene = new Scene(root, 800, 440);
         primaryStage.setTitle("Smart Accident Prevention Kit");
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);
@@ -118,13 +118,13 @@ public class demo extends Application {
         panel.setStyle("-fx-background-color: #e8f5e9; -fx-border-color: #4caf50; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
         panel.setAlignment(Pos.CENTER);
         
-        Label title = new Label("현재 상태");
+        Label title = new Label("Current Status");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
         
         currentStatusLabel = new Label("Good");
         currentStatusLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;");
         
-        currentStatusSubLabel = new Label("현재 상태를 유지하세요");
+        currentStatusSubLabel = new Label("Keep current status");
         currentStatusSubLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #2e7d32;");
         
         panel.getChildren().addAll(title, currentStatusLabel, currentStatusSubLabel);
@@ -143,10 +143,10 @@ public class demo extends Application {
         panel.setStyle("-fx-background-color: #fff3e0; -fx-border-color: #ff9800; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
         panel.setAlignment(Pos.CENTER);
         
-        Label title = new Label("운전 점수");
+        Label title = new Label("Driving Score");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
         
-        drivingScoreLabel = new Label("87점");
+        drivingScoreLabel = new Label("87 pts");
         drivingScoreLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #e65100;");
         
         panel.getChildren().addAll(title, drivingScoreLabel);
@@ -165,10 +165,10 @@ public class demo extends Application {
         panel.setStyle("-fx-background-color: #e3f2fd; -fx-border-color: #2196f3; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
         panel.setAlignment(Pos.CENTER);
         
-        Label title = new Label("사고 감지");
+        Label title = new Label("Accident Detection");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
         
-        accidentStatusLabel = new Label("사고 감지 안됨");
+        accidentStatusLabel = new Label("No Accident");
         accidentStatusLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #1976d2;");
         
         gSensorLabel = new Label("G-sensor: 1.0G");
@@ -185,41 +185,41 @@ public class demo extends Application {
     
     /** Bottom-Right-Left: Settings Panel */
     private VBox createSettingsPanel() {
-        VBox panel = new VBox(6);
-        panel.setPadding(new Insets(8));
+        VBox panel = new VBox(5);
+        panel.setPadding(new Insets(6));
         panel.setStyle("-fx-background-color: #f3e5f5; -fx-border-color: #9c27b0; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
         panel.setPrefWidth(190); // Fixed width to prevent cutting
         
-        Label title = new Label("설정");
-        title.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        Label title = new Label("Settings");
+        title.setStyle("-fx-font-size: 13px; -fx-font-weight: bold;");
         
-        Button updateBtn = new Button("업데이트");
+        Button updateBtn = new Button("Update");
         updateBtn.setPrefWidth(Double.MAX_VALUE);
-        updateBtn.setPrefHeight(30);
+        updateBtn.setPrefHeight(28);
         updateBtn.setStyle("-fx-font-size: 11px;");
         updateBtn.setOnAction(e -> showUpdateScreen());
         
-        Button personalSettingsBtn = new Button("개인설정");
+        Button personalSettingsBtn = new Button("Personal");
         personalSettingsBtn.setPrefWidth(Double.MAX_VALUE);
-        personalSettingsBtn.setPrefHeight(30);
+        personalSettingsBtn.setPrefHeight(28);
         personalSettingsBtn.setStyle("-fx-font-size: 11px;");
         personalSettingsBtn.setOnAction(e -> showPersonalSettingsScreen());
         
-        Button drowsinessSettingsBtn = new Button("졸음 감지설정");
+        Button drowsinessSettingsBtn = new Button("Drowsiness");
         drowsinessSettingsBtn.setPrefWidth(Double.MAX_VALUE);
-        drowsinessSettingsBtn.setPrefHeight(30);
+        drowsinessSettingsBtn.setPrefHeight(28);
         drowsinessSettingsBtn.setStyle("-fx-font-size: 11px;");
         drowsinessSettingsBtn.setOnAction(e -> showDrowsinessSettingsScreen());
         
-        Button autoReportSettingsBtn = new Button("자동 신고설정");
+        Button autoReportSettingsBtn = new Button("Auto Report");
         autoReportSettingsBtn.setPrefWidth(Double.MAX_VALUE);
-        autoReportSettingsBtn.setPrefHeight(30);
+        autoReportSettingsBtn.setPrefHeight(28);
         autoReportSettingsBtn.setStyle("-fx-font-size: 11px;");
         autoReportSettingsBtn.setOnAction(e -> showAutoReportSettingsScreen());
         
-        Button systemCheckBtn = new Button("시스템 체크");
+        Button systemCheckBtn = new Button("System Check");
         systemCheckBtn.setPrefWidth(Double.MAX_VALUE);
-        systemCheckBtn.setPrefHeight(30);
+        systemCheckBtn.setPrefHeight(28);
         systemCheckBtn.setStyle("-fx-font-size: 11px;");
         systemCheckBtn.setOnAction(e -> showSystemCheckScreen());
         
@@ -230,27 +230,27 @@ public class demo extends Application {
     
     /** Bottom-Right-Right: Log Check Panel */
     private VBox createLogCheckPanel() {
-        VBox panel = new VBox(6);
-        panel.setPadding(new Insets(8));
+        VBox panel = new VBox(5);
+        panel.setPadding(new Insets(6));
         panel.setStyle("-fx-background-color: #eceff1; -fx-border-color: #607d8b; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
         panel.setPrefWidth(190); // Fixed width to prevent cutting
         
-        Label title = new Label("로그 확인");
-        title.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        Label title = new Label("Log Check");
+        title.setStyle("-fx-font-size: 13px; -fx-font-weight: bold;");
         
         TextArea logArea = new TextArea();
         logArea.setEditable(false);
         logArea.setPrefRowCount(5); // Reduced from 8 to fit better
-        logArea.setPrefHeight(120); // Fixed height
+        logArea.setPrefHeight(115); // Reduced height slightly
         logArea.setStyle("-fx-font-size: 9px;");
-        logArea.setText("로그 로딩 중...\n");
+        logArea.setText("Loading logs...\n");
         
         // Load logs initially
         loadLogs(logArea);
         
-        Button refreshBtn = new Button("새로고침");
+        Button refreshBtn = new Button("Refresh");
         refreshBtn.setPrefWidth(Double.MAX_VALUE);
-        refreshBtn.setPrefHeight(25);
+        refreshBtn.setPrefHeight(24);
         refreshBtn.setStyle("-fx-font-size: 10px;");
         refreshBtn.setOnAction(e -> {
             loadLogs(logArea);
@@ -300,21 +300,21 @@ public class demo extends Application {
                                 currentStatusLabel.setText("Alert");
                                 currentStatusLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #d32f2f;");
                                 if (currentStatusSubLabel != null) {
-                                    currentStatusSubLabel.setText("졸음이 감지되었습니다!");
+                                    currentStatusSubLabel.setText("Drowsiness detected!");
                                     currentStatusSubLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #d32f2f;");
                                 }
                             } else if (state.equals("normal")) {
                                 currentStatusLabel.setText("Good");
                                 currentStatusLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;");
                                 if (currentStatusSubLabel != null) {
-                                    currentStatusSubLabel.setText("현재 상태를 유지하세요");
+                                    currentStatusSubLabel.setText("Keep current status");
                                     currentStatusSubLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #2e7d32;");
                                 }
                             } else {
                                 currentStatusLabel.setText("Waiting");
                                 currentStatusLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #757575;");
                                 if (currentStatusSubLabel != null) {
-                                    currentStatusSubLabel.setText("카메라를 확인 중...");
+                                    currentStatusSubLabel.setText("Checking camera...");
                                     currentStatusSubLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #757575;");
                                 }
                             }
@@ -337,7 +337,7 @@ public class demo extends Application {
                         
                         if (logSummary != null && logSummary.has("monthly_score")) {
                             int score = logSummary.get("monthly_score").asInt();
-                            drivingScoreLabel.setText(score + "점");
+                            drivingScoreLabel.setText(score + " pts");
                         }
                     }
                     
@@ -349,10 +349,10 @@ public class demo extends Application {
                         gSensorLabel.setText(String.format("G-sensor: %.1fG", gValue));
                         
                         if (impactDetected) {
-                            accidentStatusLabel.setText("사고 감지됨!");
+                            accidentStatusLabel.setText("Accident Detected!");
                             accidentStatusLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #d32f2f;");
                         } else {
-                            accidentStatusLabel.setText("사고 감지 안됨");
+                            accidentStatusLabel.setText("No Accident");
                             accidentStatusLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #1976d2;");
                         }
                     }
@@ -370,13 +370,13 @@ public class demo extends Application {
         content.setPadding(new Insets(20));
         
         // Back button
-        Button backBtn = new Button("← 뒤로");
+        Button backBtn = new Button("← Back");
         backBtn.setOnAction(e -> {
             mainContainer.getChildren().clear();
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("현재 상태 상세");
+        Label title = new Label("Current Status Details");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
         // Load and display detailed status
@@ -400,14 +400,14 @@ public class demo extends Application {
             
             Label earLabel = new Label("EAR: " + String.format("%.2f", ear));
             earLabel.setStyle("-fx-font-size: 14px;");
-            Label stateLabel = new Label("상태: " + (state.equals("sleepy") ? "졸음" : state.equals("normal") ? "정상" : "대기"));
+            Label stateLabel = new Label("State: " + (state.equals("sleepy") ? "Sleepy" : state.equals("normal") ? "Normal" : "Waiting"));
             stateLabel.setStyle("-fx-font-size: 14px;");
             
             statusInfo.getChildren().addAll(earLabel, stateLabel);
         }
         
         if (statusJson != null) {
-            Label sensorLabel = new Label("센서 상태: " + (statusJson.has("sensor_status") ? statusJson.get("sensor_status").asText() : "-"));
+            Label sensorLabel = new Label("Sensor Status: " + (statusJson.has("sensor_status") ? statusJson.get("sensor_status").asText() : "-"));
             sensorLabel.setStyle("-fx-font-size: 14px;");
             statusInfo.getChildren().add(sensorLabel);
         }
@@ -432,7 +432,7 @@ public class demo extends Application {
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("운전 리포트");
+        Label title = new Label("Driving Report");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
         // Load and display report data
@@ -451,21 +451,21 @@ public class demo extends Application {
         VBox reportInfo = new VBox(10);
         if (logSummary != null) {
             if (logSummary.has("monthly_score")) {
-                Label scoreLabel = new Label("월간 점수: " + logSummary.get("monthly_score").asInt() + "점");
+                Label scoreLabel = new Label("Monthly Score: " + logSummary.get("monthly_score").asInt() + " pts");
                 scoreLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
                 reportInfo.getChildren().add(scoreLabel);
             }
             
             // Daily Safety Score Chart
             CategoryAxis xAxisLine = new CategoryAxis();
-            xAxisLine.setLabel("일");
+            xAxisLine.setLabel("Day");
             xAxisLine.setTickLabelFont(javafx.scene.text.Font.font(9));
             NumberAxis yAxisLine = new NumberAxis(0, 100, 20);
-            yAxisLine.setLabel("점수");
+            yAxisLine.setLabel("Score");
             yAxisLine.setTickLabelFont(javafx.scene.text.Font.font(9));
             
             LineChart<String, Number> lineChart = new LineChart<>(xAxisLine, yAxisLine);
-            lineChart.setTitle("일별 안전 점수");
+            lineChart.setTitle("Daily Safety Score");
             lineChart.setPrefHeight(200);
             lineChart.setLegendVisible(false);
             lineChart.setStyle("-fx-font-size: 9px;");
@@ -476,21 +476,21 @@ public class demo extends Application {
                 for (com.fasterxml.jackson.databind.JsonNode score : dailyScores) {
                     int day = score.has("day") ? score.get("day").asInt() : 0;
                     int scoreValue = score.has("score") ? score.get("score").asInt() : 0;
-                    scoreSeries.getData().add(new XYChart.Data<>(day + "일", scoreValue));
+                    scoreSeries.getData().add(new XYChart.Data<>("Day " + day, scoreValue));
                 }
             }
             lineChart.getData().add(scoreSeries);
             
             // Event Count Bar Chart
             CategoryAxis xAxisBar = new CategoryAxis();
-            xAxisBar.setLabel("이벤트");
+            xAxisBar.setLabel("Event");
             xAxisBar.setTickLabelFont(javafx.scene.text.Font.font(9));
             NumberAxis yAxisBar = new NumberAxis();
-            yAxisBar.setLabel("횟수");
+            yAxisBar.setLabel("Count");
             yAxisBar.setTickLabelFont(javafx.scene.text.Font.font(9));
             
             BarChart<String, Number> barChart = new BarChart<>(xAxisBar, yAxisBar);
-            barChart.setTitle("이벤트 타입별 횟수");
+            barChart.setTitle("Event Count by Type");
             barChart.setPrefHeight(200);
             barChart.setLegendVisible(false);
             barChart.setStyle("-fx-font-size: 9px;");
@@ -499,13 +499,13 @@ public class demo extends Application {
             if (logSummary.has("event_counts")) {
                 com.fasterxml.jackson.databind.JsonNode events = logSummary.get("event_counts");
                 if (events.has("sudden_stop")) {
-                    eventSeries.getData().add(new XYChart.Data<>("급정거", events.get("sudden_stop").asInt()));
+                    eventSeries.getData().add(new XYChart.Data<>("Sudden Stop", events.get("sudden_stop").asInt()));
                 }
                 if (events.has("sudden_acceleration")) {
-                    eventSeries.getData().add(new XYChart.Data<>("급가속", events.get("sudden_acceleration").asInt()));
+                    eventSeries.getData().add(new XYChart.Data<>("Sudden Accel", events.get("sudden_acceleration").asInt()));
                 }
                 if (events.has("drowsiness")) {
-                    eventSeries.getData().add(new XYChart.Data<>("졸음", events.get("drowsiness").asInt()));
+                    eventSeries.getData().add(new XYChart.Data<>("Drowsiness", events.get("drowsiness").asInt()));
                 }
             }
             barChart.getData().add(eventSeries);
@@ -513,22 +513,22 @@ public class demo extends Application {
             // Event counts text
             if (logSummary.has("event_counts")) {
                 com.fasterxml.jackson.databind.JsonNode events = logSummary.get("event_counts");
-                Label eventsLabel = new Label("이벤트 상세:");
+                Label eventsLabel = new Label("Event Details:");
                 eventsLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
                 reportInfo.getChildren().add(eventsLabel);
                 
                 if (events.has("sudden_stop")) {
-                    Label stopLabel = new Label("  급정거: " + events.get("sudden_stop").asInt() + "회");
+                    Label stopLabel = new Label("  Sudden Stop: " + events.get("sudden_stop").asInt() + " times");
                     stopLabel.setStyle("-fx-font-size: 12px;");
                     reportInfo.getChildren().add(stopLabel);
                 }
                 if (events.has("sudden_acceleration")) {
-                    Label accelLabel = new Label("  급가속: " + events.get("sudden_acceleration").asInt() + "회");
+                    Label accelLabel = new Label("  Sudden Acceleration: " + events.get("sudden_acceleration").asInt() + " times");
                     accelLabel.setStyle("-fx-font-size: 12px;");
                     reportInfo.getChildren().add(accelLabel);
                 }
                 if (events.has("drowsiness")) {
-                    Label drowsyLabel = new Label("  졸음: " + events.get("drowsiness").asInt() + "회");
+                    Label drowsyLabel = new Label("  Drowsiness: " + events.get("drowsiness").asInt() + " times");
                     drowsyLabel.setStyle("-fx-font-size: 12px;");
                     reportInfo.getChildren().add(drowsyLabel);
                 }
@@ -559,7 +559,7 @@ public class demo extends Application {
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("사고 감지 상세");
+        Label title = new Label("Accident Detection Details");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
         com.fasterxml.jackson.databind.JsonNode statusJson = StatusDataLoader.load();
@@ -573,21 +573,21 @@ public class demo extends Application {
             Label gLabel = new Label("G-Sensor: " + String.format("%.2fG", gValue));
             gLabel.setStyle("-fx-font-size: 14px;");
             
-            Label impactLabel = new Label("충격 감지: " + (impactDetected ? "감지됨" : "없음"));
+            Label impactLabel = new Label("Impact Detection: " + (impactDetected ? "Detected" : "None"));
             impactLabel.setStyle("-fx-font-size: 14px;");
             
-            Label gpsLabel = new Label("GPS 위치: " + gpsPos);
+            Label gpsLabel = new Label("GPS Position: " + gpsPos);
             gpsLabel.setStyle("-fx-font-size: 14px;");
             
             accidentInfo.getChildren().addAll(gLabel, impactLabel, gpsLabel);
         }
         
-        Button testBtn = new Button("사고 감지 테스트");
+        Button testBtn = new Button("Test Accident Detection");
         testBtn.setOnAction(e -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("사고 감지");
-            alert.setHeaderText("사고가 감지되었습니다!");
-            alert.setContentText("10초 내 화면을 터치하여 신고를 취소하세요.");
+            alert.setTitle("Accident Detection");
+            alert.setHeaderText("Accident detected!");
+            alert.setContentText("Touch the screen within 10 seconds to cancel the report.");
             alert.showAndWait();
         });
         
@@ -611,10 +611,10 @@ public class demo extends Application {
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("소프트웨어 업데이트");
+        Label title = new Label("Software Update");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
-        Label descriptionLabel = new Label("requirements.txt에 있는 Python 패키지들을 최신 버전으로 업데이트합니다.");
+        Label descriptionLabel = new Label("Update Python packages in requirements.txt to the latest version.");
         descriptionLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
         descriptionLabel.setWrapText(true);
         
@@ -622,16 +622,16 @@ public class demo extends Application {
         updateLogArea.setEditable(false);
         updateLogArea.setPrefRowCount(15);
         updateLogArea.setStyle("-fx-font-size: 10px;");
-        updateLogArea.setText("업데이트 로그가 여기에 표시됩니다...\n\n");
+        updateLogArea.setText("Update logs will be displayed here...\n\n");
         
-        Button updateBtn = new Button("패키지 업데이트 실행");
+        Button updateBtn = new Button("Run Package Update");
         updateBtn.setPrefWidth(Double.MAX_VALUE);
         updateBtn.setStyle("-fx-font-size: 14px;");
         updateBtn.setOnAction(e -> {
             updateBtn.setDisable(true);
             updateLogArea.clear();
-            updateLogArea.appendText("=== Python 패키지 업데이트 시작 ===\n");
-            updateLogArea.appendText("requirements.txt에 있는 패키지들을 최신 버전으로 업데이트합니다.\n\n");
+            updateLogArea.appendText("=== Starting Python Package Update ===\n");
+            updateLogArea.appendText("Updating packages in requirements.txt to the latest version.\n\n");
             
             CompletableFuture.runAsync(() -> {
                 try {
@@ -659,12 +659,12 @@ public class demo extends Application {
                     if (!new java.io.File(scriptPath).exists()) {
                         Platform.runLater(() -> {
                             updateBtn.setDisable(false);
-                            updateLogArea.appendText("[ERROR] update_system.sh 파일을 찾을 수 없습니다.\n");
-                            updateLogArea.appendText("경로: " + scriptPath + "\n");
+                            updateLogArea.appendText("[ERROR] Cannot find update_system.sh file.\n");
+                            updateLogArea.appendText("Path: " + scriptPath + "\n");
                             Alert alert = new Alert(Alert.AlertType.ERROR);
-                            alert.setTitle("오류");
-                            alert.setHeaderText("스크립트 파일을 찾을 수 없습니다");
-                            alert.setContentText("update_system.sh 파일이 존재하는지 확인하세요.");
+                            alert.setTitle("Error");
+                            alert.setHeaderText("Script file not found");
+                            alert.setContentText("Please check if update_system.sh file exists.");
                             alert.showAndWait();
                         });
                         return;
@@ -726,18 +726,18 @@ public class demo extends Application {
                     Platform.runLater(() -> {
                         updateBtn.setDisable(false);
                         if (exitCode == 0) {
-                            updateLogArea.appendText("\n=== 업데이트 완료 ===\n");
+                            updateLogArea.appendText("\n=== Update Complete ===\n");
                             Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                            alert.setTitle("업데이트 완료");
-                            alert.setHeaderText("Python 패키지 업데이트가 완료되었습니다.");
-                            alert.setContentText("변경사항을 적용하려면 백엔드를 재시작하는 것을 권장합니다.");
+                            alert.setTitle("Update Complete");
+                            alert.setHeaderText("Python package update completed.");
+                            alert.setContentText("It is recommended to restart the backend to apply changes.");
                             alert.showAndWait();
                         } else {
-                            updateLogArea.appendText("\n=== 업데이트 실패 (종료 코드: " + exitCode + ") ===\n");
+                            updateLogArea.appendText("\n=== Update Failed (Exit Code: " + exitCode + ") ===\n");
                             Alert alert = new Alert(Alert.AlertType.ERROR);
-                            alert.setTitle("업데이트 실패");
-                            alert.setHeaderText("업데이트 중 오류가 발생했습니다.");
-                            alert.setContentText("위의 로그를 확인하여 문제를 해결하세요.");
+                            alert.setTitle("Update Failed");
+                            alert.setHeaderText("An error occurred during update.");
+                            alert.setContentText("Please check the logs above to resolve the issue.");
                             alert.showAndWait();
                         }
                     });
@@ -747,9 +747,9 @@ public class demo extends Application {
                         updateLogArea.appendText("[ERROR] " + ex.getMessage() + "\n");
                         ex.printStackTrace();
                         Alert alert = new Alert(Alert.AlertType.ERROR);
-                        alert.setTitle("오류");
-                        alert.setHeaderText("업데이트 실행 실패");
-                        alert.setContentText("오류: " + ex.getMessage());
+                        alert.setTitle("Error");
+                        alert.setHeaderText("Update execution failed");
+                        alert.setContentText("Error: " + ex.getMessage());
                         alert.showAndWait();
                     });
                 }
@@ -776,20 +776,20 @@ public class demo extends Application {
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("개인 설정");
+        Label title = new Label("Personal Settings");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
-        Label nameLabel = new Label("이름:");
-        TextField nameField = new TextField("사용자");
+        Label nameLabel = new Label("Name:");
+        TextField nameField = new TextField("User");
         
-        Label phoneLabel = new Label("전화번호:");
+        Label phoneLabel = new Label("Phone:");
         TextField phoneField = new TextField("010-0000-0000");
         
-        Button saveBtn = new Button("저장");
+        Button saveBtn = new Button("Save");
         saveBtn.setOnAction(e -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("저장");
-            alert.setHeaderText("설정이 저장되었습니다.");
+            alert.setTitle("Save");
+            alert.setHeaderText("Settings saved.");
             alert.showAndWait();
         });
         
@@ -813,10 +813,10 @@ public class demo extends Application {
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("졸음 감지 설정");
+        Label title = new Label("Drowsiness Detection Settings");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
-        Label thresholdLabel = new Label("임계값: 0.22");
+        Label thresholdLabel = new Label("Threshold: 0.22");
         thresholdLabel.setStyle("-fx-font-size: 14px;");
         
         Slider thresholdSlider = new Slider(0.1, 0.4, 0.22);
@@ -824,13 +824,13 @@ public class demo extends Application {
         thresholdSlider.setShowTickMarks(true);
         thresholdSlider.setMajorTickUnit(0.05);
         thresholdSlider.valueProperty().addListener((obs, o, n) ->
-            thresholdLabel.setText("임계값: " + String.format("%.2f", n.doubleValue()))
+            thresholdLabel.setText("Threshold: " + String.format("%.2f", n.doubleValue()))
         );
         
-        CheckBox alarmCheck = new CheckBox("알람 활성화");
+        CheckBox alarmCheck = new CheckBox("Enable Alarm");
         alarmCheck.setSelected(true);
         
-        Button saveBtn = new Button("저장");
+        Button saveBtn = new Button("Save");
         saveBtn.setOnAction(e -> {
             // Save threshold settings to config.py
             double thresholdValue = thresholdSlider.getValue();
@@ -891,25 +891,25 @@ public class demo extends Application {
                     Platform.runLater(() -> {
                         if (exitCode1 == 0) {
                             Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                            alert.setTitle("저장");
-                            alert.setHeaderText("설정이 저장되었습니다.");
-                            alert.setContentText(String.format("임계값: %.2f\n알람 활성화: %s", 
-                                thresholdValue, alarmEnabled ? "예" : "아니오"));
+                            alert.setTitle("Save");
+                            alert.setHeaderText("Settings saved.");
+                            alert.setContentText(String.format("Threshold: %.2f\nAlarm Enabled: %s", 
+                                thresholdValue, alarmEnabled ? "Yes" : "No"));
                             alert.showAndWait();
                         } else {
                             Alert alert = new Alert(Alert.AlertType.ERROR);
-                            alert.setTitle("오류");
-                            alert.setHeaderText("설정 저장 실패");
-                            alert.setContentText("config.py 업데이트에 실패했습니다.");
+                            alert.setTitle("Error");
+                            alert.setHeaderText("Failed to save settings");
+                            alert.setContentText("Failed to update config.py.");
                             alert.showAndWait();
                         }
                     });
                 } catch (Exception ex) {
                     Platform.runLater(() -> {
                         Alert alert = new Alert(Alert.AlertType.ERROR);
-                        alert.setTitle("오류");
-                        alert.setHeaderText("설정 저장 실패");
-                        alert.setContentText("오류: " + ex.getMessage());
+                        alert.setTitle("Error");
+                        alert.setHeaderText("Failed to save settings");
+                        alert.setContentText("Error: " + ex.getMessage());
                         alert.showAndWait();
                     });
                 }
@@ -936,40 +936,40 @@ public class demo extends Application {
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("자동 신고 설정");
+        Label title = new Label("Auto Report Settings");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
         // Auto report enable/disable
-        CheckBox autoReportCheck = new CheckBox("자동 신고 활성화");
+        CheckBox autoReportCheck = new CheckBox("Enable Auto Report");
         autoReportCheck.setSelected(true);
         
         Separator separator1 = new Separator();
         
         // Phone number settings
-        Label fromPhoneLabel = new Label("송신 전화번호:");
+        Label fromPhoneLabel = new Label("From Phone Number:");
         fromPhoneLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
         TextField fromPhoneField = new TextField("010-7220-5917");
-        fromPhoneField.setPromptText("예: 010-1234-5678");
+        fromPhoneField.setPromptText("e.g., 010-1234-5678");
         
-        Label toPhoneLabel = new Label("수신 전화번호:");
+        Label toPhoneLabel = new Label("To Phone Number:");
         toPhoneLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
         TextField toPhoneField = new TextField("010-4090-7445");
-        toPhoneField.setPromptText("예: 010-1234-5678");
+        toPhoneField.setPromptText("e.g., 010-1234-5678");
         
         Separator separator2 = new Separator();
         
         // System log clear button
-        Label systemLabel = new Label("시스템 관리");
+        Label systemLabel = new Label("System Management");
         systemLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
         
-        Button clearLogsBtn = new Button("시스템 로그 초기화");
+        Button clearLogsBtn = new Button("Clear System Logs");
         clearLogsBtn.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-size: 14px;");
         clearLogsBtn.setPrefWidth(Double.MAX_VALUE);
         clearLogsBtn.setOnAction(e -> {
             Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-            confirmAlert.setTitle("로그 초기화");
-            confirmAlert.setHeaderText("로그를 초기화하시겠습니까?");
-            confirmAlert.setContentText("모든 운전 이벤트 로그가 삭제되고 점수가 100점으로 초기화됩니다.\n이 작업은 되돌릴 수 없습니다.");
+            confirmAlert.setTitle("Clear Logs");
+            confirmAlert.setHeaderText("Do you want to clear logs?");
+            confirmAlert.setContentText("All driving event logs will be deleted and the score will be reset to 100.\nThis action cannot be undone.");
             
             confirmAlert.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.OK) {
@@ -1021,15 +1021,15 @@ public class demo extends Application {
                                 
                                 if (exitCode == 0) {
                                     Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-                                    successAlert.setTitle("완료");
-                                    successAlert.setHeaderText("로그가 초기화되었습니다.");
-                                    successAlert.setContentText("모든 운전 이벤트 로그가 삭제되고 점수가 100점으로 초기화되었습니다.");
+                                    successAlert.setTitle("Complete");
+                                    successAlert.setHeaderText("Logs cleared.");
+                                    successAlert.setContentText("All driving event logs have been deleted and the score has been reset to 100.");
                                     successAlert.showAndWait();
                                 } else {
                                     Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                                    errorAlert.setTitle("오류");
-                                    errorAlert.setHeaderText("로그 초기화 실패");
-                                    errorAlert.setContentText("로그 파일을 초기화하는 중 오류가 발생했습니다.");
+                                    errorAlert.setTitle("Error");
+                                    errorAlert.setHeaderText("Failed to clear logs");
+                                    errorAlert.setContentText("An error occurred while clearing log files.");
                                     errorAlert.showAndWait();
                                 }
                             });
@@ -1037,9 +1037,9 @@ public class demo extends Application {
                             Platform.runLater(() -> {
                                 clearLogsBtn.setDisable(false);
                                 Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                                errorAlert.setTitle("오류");
-                                errorAlert.setHeaderText("로그 초기화 실패");
-                                errorAlert.setContentText("오류: " + ex.getMessage());
+                                errorAlert.setTitle("Error");
+                                errorAlert.setHeaderText("Failed to clear logs");
+                                errorAlert.setContentText("Error: " + ex.getMessage());
                                 errorAlert.showAndWait();
                             });
                         }
@@ -1049,7 +1049,7 @@ public class demo extends Application {
         });
         
         // Save button
-        Button saveBtn = new Button("저장");
+        Button saveBtn = new Button("Save");
         saveBtn.setPrefWidth(Double.MAX_VALUE);
         saveBtn.setStyle("-fx-font-size: 14px;");
         saveBtn.setOnAction(e -> {
@@ -1060,9 +1060,9 @@ public class demo extends Application {
             // Validate phone numbers
             if (fromPhone.isEmpty() || toPhone.isEmpty()) {
                 Alert alert = new Alert(Alert.AlertType.WARNING);
-                alert.setTitle("입력 오류");
-                alert.setHeaderText("전화번호를 입력해주세요.");
-                alert.setContentText("송신 및 수신 전화번호를 모두 입력해야 합니다.");
+                alert.setTitle("Input Error");
+                alert.setHeaderText("Please enter phone numbers.");
+                alert.setContentText("Both sender and receiver phone numbers must be entered.");
                 alert.showAndWait();
                 return;
             }
@@ -1151,16 +1151,16 @@ public class demo extends Application {
                         
                         if (exitCode1 == 0 && exitCode2 == 0 && exitCode3 == 0) {
                             Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                            alert.setTitle("저장");
-                            alert.setHeaderText("설정이 저장되었습니다.");
-                            alert.setContentText(String.format("자동 신고 활성화: %s\n송신 번호: %s\n수신 번호: %s",
-                                autoReportEnabled ? "예" : "아니오", fromPhone, toPhone));
+                            alert.setTitle("Save");
+                            alert.setHeaderText("Settings saved.");
+                            alert.setContentText(String.format("Auto Report Enabled: %s\nFrom Number: %s\nTo Number: %s",
+                                autoReportEnabled ? "Yes" : "No", fromPhone, toPhone));
                             alert.showAndWait();
                         } else {
                             Alert alert = new Alert(Alert.AlertType.ERROR);
-                            alert.setTitle("오류");
-                            alert.setHeaderText("설정 저장 실패");
-                            alert.setContentText("config.py 업데이트에 실패했습니다.");
+                            alert.setTitle("Error");
+                            alert.setHeaderText("Failed to save settings");
+                            alert.setContentText("Failed to update config.py.");
                             alert.showAndWait();
                         }
                     });
@@ -1199,10 +1199,10 @@ public class demo extends Application {
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("시스템 체크");
+        Label title = new Label("System Check");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
-        Label descriptionLabel = new Label("각 센서 및 기능이 정상적으로 작동하는지 확인합니다.");
+        Label descriptionLabel = new Label("Check if each sensor and function is working properly.");
         descriptionLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
         descriptionLabel.setWrapText(true);
         
@@ -1210,17 +1210,17 @@ public class demo extends Application {
         resultArea.setEditable(false);
         resultArea.setPrefRowCount(20);
         resultArea.setStyle("-fx-font-size: 11px;");
-        resultArea.setText("시스템 체크를 실행하려면 '시스템 체크 실행' 버튼을 클릭하세요.\n\n");
+        resultArea.setText("Click the 'Run System Check' button to execute system check.\n\n");
         
-        Button checkBtn = new Button("시스템 체크 실행");
+        Button checkBtn = new Button("Run System Check");
         checkBtn.setPrefWidth(Double.MAX_VALUE);
         checkBtn.setStyle("-fx-font-size: 14px;");
         
         checkBtn.setOnAction(e -> {
             checkBtn.setDisable(true);
             resultArea.clear();
-            resultArea.appendText("=== 시스템 체크 시작 ===\n");
-            resultArea.appendText("각 센서와 기능을 확인하는 중...\n\n");
+            resultArea.appendText("=== Starting System Check ===\n");
+            resultArea.appendText("Checking sensors and functions...\n\n");
             
             CompletableFuture.runAsync(() -> {
                 try {
@@ -1258,8 +1258,8 @@ public class demo extends Application {
                     if (!new java.io.File(scriptPath).exists()) {
                         Platform.runLater(() -> {
                             checkBtn.setDisable(false);
-                            resultArea.appendText("[ERROR] check_system.py 파일을 찾을 수 없습니다.\n");
-                            resultArea.appendText("경로: " + scriptPath + "\n");
+                            resultArea.appendText("[ERROR] Cannot find check_system.py file.\n");
+                            resultArea.appendText("Path: " + scriptPath + "\n");
                         });
                         return;
                     }
@@ -1300,7 +1300,7 @@ public class demo extends Application {
                             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                             com.fasterxml.jackson.databind.JsonNode results = mapper.readTree(jsonOutput.toString());
                             
-                            resultArea.appendText("\n=== 체크 결과 ===\n\n");
+                            resultArea.appendText("\n=== Check Results ===\n\n");
                             
                             if (results.has("checks")) {
                                 com.fasterxml.jackson.databind.JsonNode checks = results.get("checks");
@@ -1312,7 +1312,7 @@ public class demo extends Application {
                                     String message = camera.get("message").asText();
                                     String details = camera.has("details") ? camera.get("details").asText() : "";
                                     String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
-                                    resultArea.appendText(String.format("%s 카메라: %s\n   %s\n", statusIcon, message, details));
+                                    resultArea.appendText(String.format("%s Camera: %s\n   %s\n", statusIcon, message, details));
                                 }
                                 
                                 // Accelerometer check
@@ -1322,7 +1322,7 @@ public class demo extends Application {
                                     String message = accel.get("message").asText();
                                     String details = accel.has("details") ? accel.get("details").asText() : "";
                                     String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
-                                    resultArea.appendText(String.format("%s 가속도 센서: %s\n   %s\n", statusIcon, message, details));
+                                    resultArea.appendText(String.format("%s Accelerometer: %s\n   %s\n", statusIcon, message, details));
                                 }
                                 
                                 // GPS check
@@ -1342,7 +1342,7 @@ public class demo extends Application {
                                     String message = speaker.get("message").asText();
                                     String details = speaker.has("details") ? speaker.get("details").asText() : "";
                                     String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
-                                    resultArea.appendText(String.format("%s 스피커: %s\n   %s\n", statusIcon, message, details));
+                                    resultArea.appendText(String.format("%s Speaker: %s\n   %s\n", statusIcon, message, details));
                                 }
                                 
                                 // SMS check
@@ -1352,23 +1352,23 @@ public class demo extends Application {
                                     String message = sms.get("message").asText();
                                     String details = sms.has("details") ? sms.get("details").asText() : "";
                                     String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
-                                    resultArea.appendText(String.format("%s SMS (자동 신고): %s\n   %s\n", statusIcon, message, details));
+                                    resultArea.appendText(String.format("%s SMS (Auto Report): %s\n   %s\n", statusIcon, message, details));
                                 }
                             }
                             
-                            resultArea.appendText("\n=== 체크 완료 ===\n");
+                            resultArea.appendText("\n=== Check Complete ===\n");
                             resultArea.setScrollTop(Double.MAX_VALUE);
                             
                             if (exitCode == 0) {
                                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                                alert.setTitle("시스템 체크 완료");
-                                alert.setHeaderText("모든 체크가 완료되었습니다.");
-                                alert.setContentText("결과를 확인하세요.");
+                                alert.setTitle("System Check Complete");
+                                alert.setHeaderText("All checks completed.");
+                                alert.setContentText("Please check the results.");
                                 alert.showAndWait();
                             }
                         } catch (Exception parseEx) {
-                            resultArea.appendText("\n[ERROR] 결과 파싱 실패: " + parseEx.getMessage() + "\n");
-                            resultArea.appendText("원본 출력:\n" + jsonOutput.toString() + "\n");
+                            resultArea.appendText("\n[ERROR] Failed to parse results: " + parseEx.getMessage() + "\n");
+                            resultArea.appendText("Original output:\n" + jsonOutput.toString() + "\n");
                         }
                     });
                 } catch (Exception ex) {
@@ -1401,7 +1401,7 @@ public class demo extends Application {
             mainContainer.getChildren().add(createMainScreen());
         });
         
-        Label title = new Label("로그 확인");
+        Label title = new Label("Log Check");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         
         TextArea logArea = new TextArea();
@@ -1413,16 +1413,16 @@ public class demo extends Application {
         HBox buttonBox = new HBox(10);
         buttonBox.setAlignment(Pos.CENTER);
         
-        Button refreshBtn = new Button("새로고침");
+        Button refreshBtn = new Button("Refresh");
         refreshBtn.setOnAction(e -> loadLogs(logArea));
         
-        Button clearBtn = new Button("로그 초기화");
+        Button clearBtn = new Button("Clear Logs");
         clearBtn.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white;");
         clearBtn.setOnAction(e -> {
             Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-            confirmAlert.setTitle("로그 초기화");
-            confirmAlert.setHeaderText("로그를 초기화하시겠습니까?");
-            confirmAlert.setContentText("모든 운전 이벤트 로그가 삭제되고 점수가 100점으로 초기화됩니다.\n이 작업은 되돌릴 수 없습니다.");
+            confirmAlert.setTitle("Clear Logs");
+            confirmAlert.setHeaderText("Do you want to clear logs?");
+            confirmAlert.setContentText("All driving event logs will be deleted and the score will be reset to 100.\nThis action cannot be undone.");
             
             confirmAlert.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.OK) {
@@ -1478,16 +1478,16 @@ public class demo extends Application {
                                 
                                 if (exitCode == 0) {
                                     Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-                                    successAlert.setTitle("완료");
-                                    successAlert.setHeaderText("로그가 초기화되었습니다.");
-                                    successAlert.setContentText("모든 운전 이벤트 로그가 삭제되고 점수가 100점으로 초기화되었습니다.");
+                                    successAlert.setTitle("Complete");
+                                    successAlert.setHeaderText("Logs cleared.");
+                                    successAlert.setContentText("All driving event logs have been deleted and the score has been reset to 100.");
                                     successAlert.showAndWait();
                                     loadLogs(logArea);  // Refresh log display
                                 } else {
                                     Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                                    errorAlert.setTitle("오류");
-                                    errorAlert.setHeaderText("로그 초기화 실패");
-                                    errorAlert.setContentText("로그 파일을 초기화하는 중 오류가 발생했습니다.");
+                                    errorAlert.setTitle("Error");
+                                    errorAlert.setHeaderText("Failed to clear logs");
+                                    errorAlert.setContentText("An error occurred while clearing log files.");
                                     errorAlert.showAndWait();
                                 }
                             });
@@ -1496,9 +1496,9 @@ public class demo extends Application {
                                 clearBtn.setDisable(false);
                                 refreshBtn.setDisable(false);
                                 Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                                errorAlert.setTitle("오류");
-                                errorAlert.setHeaderText("로그 초기화 실패");
-                                errorAlert.setContentText("오류: " + ex.getMessage());
+                                errorAlert.setTitle("Error");
+                                errorAlert.setHeaderText("Failed to clear logs");
+                                errorAlert.setContentText("Error: " + ex.getMessage());
                                 errorAlert.showAndWait();
                             });
                         }
@@ -1532,45 +1532,45 @@ public class demo extends Application {
         }
         
         StringBuilder logText = new StringBuilder();
-        logText.append("=== 시스템 로그 ===\n\n");
+        logText.append("=== System Logs ===\n\n");
         
         if (logSummary != null) {
             if (logSummary.has("monthly_score")) {
-                logText.append("월간 점수: ").append(logSummary.get("monthly_score").asInt()).append("점\n");
+                logText.append("Monthly Score: ").append(logSummary.get("monthly_score").asInt()).append(" pts\n");
             }
             
             if (logSummary.has("event_counts")) {
                 com.fasterxml.jackson.databind.JsonNode events = logSummary.get("event_counts");
-                logText.append("\n이벤트 카운트:\n");
+                logText.append("\nEvent Counts:\n");
                 if (events.has("sudden_stop")) {
-                    logText.append("  급정거: ").append(events.get("sudden_stop").asInt()).append("회\n");
+                    logText.append("  Sudden Stop: ").append(events.get("sudden_stop").asInt()).append(" times\n");
                 }
                 if (events.has("sudden_acceleration")) {
-                    logText.append("  급가속: ").append(events.get("sudden_acceleration").asInt()).append("회\n");
+                    logText.append("  Sudden Acceleration: ").append(events.get("sudden_acceleration").asInt()).append(" times\n");
                 }
                 if (events.has("drowsiness")) {
-                    logText.append("  졸음: ").append(events.get("drowsiness").asInt()).append("회\n");
+                    logText.append("  Drowsiness: ").append(events.get("drowsiness").asInt()).append(" times\n");
                 }
             }
             
             if (logSummary.has("report_stats")) {
                 com.fasterxml.jackson.databind.JsonNode reportStats = logSummary.get("report_stats");
-                logText.append("\n자동 신고 통계:\n");
+                logText.append("\nAuto Report Statistics:\n");
                 if (reportStats.has("alert_triggered")) {
-                    logText.append("  경고 발생: ").append(reportStats.get("alert_triggered").asInt()).append("회\n");
+                    logText.append("  Alerts Triggered: ").append(reportStats.get("alert_triggered").asInt()).append(" times\n");
                 }
                 if (reportStats.has("report_triggered")) {
-                    logText.append("  신고 실행: ").append(reportStats.get("report_triggered").asInt()).append("회\n");
+                    logText.append("  Reports Triggered: ").append(reportStats.get("report_triggered").asInt()).append(" times\n");
                 }
                 if (reportStats.has("report_cancelled")) {
-                    logText.append("  신고 취소: ").append(reportStats.get("report_cancelled").asInt()).append("회\n");
+                    logText.append("  Reports Cancelled: ").append(reportStats.get("report_cancelled").asInt()).append(" times\n");
                 }
                 if (reportStats.has("sms_sent")) {
-                    logText.append("  SMS 발송: ").append(reportStats.get("sms_sent").asInt()).append("회\n");
+                    logText.append("  SMS Sent: ").append(reportStats.get("sms_sent").asInt()).append(" times\n");
                 }
             }
         } else {
-            logText.append("로그 데이터를 불러올 수 없습니다.\n");
+            logText.append("Unable to load log data.\n");
         }
         
         logArea.setText(logText.toString());
