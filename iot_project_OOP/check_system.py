@@ -225,6 +225,26 @@ def test_sms():
                 "details": "Please set sender and receiver phone numbers"
             }
         
+        # Check if SOLAPI library is available
+        try:
+            from solapi import SolapiMessageService
+            solapi_available = True
+        except ImportError:
+            solapi_available = False
+            return {
+                "status": "ERROR",
+                "message": "SMS library not found",
+                "details": "solapi library is not installed. Run: pip3 install solapi"
+            }
+        
+        # Check API credentials
+        if not config.SMS_API_KEY or not config.SMS_API_SECRET:
+            return {
+                "status": "ERROR",
+                "message": "SMS API credentials not set",
+                "details": "Please set SMS_API_KEY and SMS_API_SECRET in config.py"
+            }
+        
         # Try to initialize SMS service
         logger = EventLogger()
         # Use GPS_ENABLED from config
@@ -233,11 +253,23 @@ def test_sms():
         report_manager = ReportManager(logger=logger, gps_manager=gps)
         
         if report_manager.sms_service is None:
-            return {
-                "status": "ERROR",
-                "message": "SMS service initialization failed",
-                "details": "SOLAPI library is not installed or API key is incorrect"
-            }
+            # Try to initialize directly to get more detailed error
+            try:
+                test_service = SolapiMessageService(
+                    api_key=config.SMS_API_KEY,
+                    api_secret=config.SMS_API_SECRET
+                )
+                return {
+                    "status": "WARNING",
+                    "message": "SMS service initialization failed in ReportManager",
+                    "details": "Service can be created directly but ReportManager failed. Check ReportManager initialization."
+                }
+            except Exception as e:
+                return {
+                    "status": "ERROR",
+                    "message": "SMS service initialization failed",
+                    "details": f"Failed to create SMS service. Error: {str(e)}. Please check your API key and secret in config.py"
+                }
         
         # Test SMS sending (actually send a test message)
         try:
