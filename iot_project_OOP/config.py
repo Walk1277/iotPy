@@ -34,6 +34,8 @@ SMS_ENABLED = True  # Set to True to enable SMS reporting
 GPS_ENABLED = True  # Set to True to enable GPS module
 GPS_SERIAL_PORT = "/dev/ttyUSB0"  # GPS serial port (Raspberry Pi)
 GPS_BAUD_RATE = 9600  # GPS baud rate
+DRIVING_SPEED_THRESHOLD = 5.0  # km/h - Speed threshold to determine if vehicle is driving (above this = driving)
+NO_FACE_WHILE_DRIVING_TIMEOUT = 10.0  # seconds - Time to wait before activating speaker when no face detected while driving
 
 # UI data directory
 UI_DATA_DIR = "data"  # Relative to project root

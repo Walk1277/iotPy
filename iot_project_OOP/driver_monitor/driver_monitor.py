@@ -84,6 +84,7 @@ class DriverMonitor:
         alarm_on = False
         prev_alarm_on = False
         alarm_start_time = None  # Track when alarm started
+        no_face_start_time = None  # Track when no face detected while driving started
 
         # Accelerometer event display text
         accel_event_text = ""
@@ -118,37 +119,77 @@ class DriverMonitor:
                 left_pts, right_pts = None, None
             alarm_on = analyze_result[3]
             
-            # Update UI data bridge
-            self.data_bridge.update_drowsiness_status(
-                ear=ear if face_detected else None,
-                face_detected=face_detected,
-                alarm_on=alarm_on,
-                alarm_duration=alarm_duration if alarm_start_time else 0.0,
-                show_speaker_popup=show_speaker_popup
-            )
-
             # =========================================
             # 3) Drowsiness alarm handling
             # =========================================
+            # Get GPS data to determine if vehicle is driving
+            gps_data = self.gps.read_gps()
+            gps_speed = 0.0
+            is_driving = False
+            if gps_data and len(gps_data) >= 4:
+                gps_speed = gps_data[3]  # speed in km/h
+                importlib.reload(config)
+                speed_threshold = getattr(config, 'DRIVING_SPEED_THRESHOLD', 5.0)
+                is_driving = gps_speed >= speed_threshold
+            
+            # Determine if speaker should be active
+            # Speaker should be active if:
+            # 1. Driving AND (drowsiness detected OR no face for 10+ seconds)
+            # 2. Not driving: speaker should NOT be active (only show alert in UI)
+            should_activate_speaker = False
+            no_face_duration = 0.0
+            
+            if is_driving:
+                # When driving: check conditions
+                if alarm_on:
+                    # Drowsiness detected while driving - activate speaker immediately
+                    should_activate_speaker = True
+                    no_face_start_time = None  # Reset no face timer
+                elif not face_detected:
+                    # No face detected while driving - start timer
+                    if no_face_start_time is None:
+                        no_face_start_time = datetime.datetime.now()
+                    
+                    # Calculate how long no face has been detected
+                    no_face_duration = (datetime.datetime.now() - no_face_start_time).total_seconds()
+                    importlib.reload(config)
+                    timeout = getattr(config, 'NO_FACE_WHILE_DRIVING_TIMEOUT', 10.0)
+                    
+                    # Activate speaker only after timeout
+                    if no_face_duration >= timeout:
+                        should_activate_speaker = True
+                else:
+                    # Face detected - reset no face timer
+                    no_face_start_time = None
+            else:
+                # When not driving: do NOT activate speaker
+                # Even if drowsiness detected, only show alert in UI
+                should_activate_speaker = False
+                no_face_start_time = None  # Reset timer when not driving
+            
             # Check if alarm state changed (from off to on)
-            if alarm_on and not prev_alarm_on:
-                # Alarm just turned on - log the drowsiness event
-                self.logger.log("drowsiness")
-                print(f"[DriverMonitor] Drowsiness detected and logged. EAR: {ear:.3f}")
+            if should_activate_speaker and not prev_alarm_on:
+                # Alarm just turned on - log the event
+                if alarm_on:
+                    self.logger.log("drowsiness")
+                    print(f"[DriverMonitor] Drowsiness detected and logged. EAR: {ear:.3f}")
+                elif not face_detected and is_driving:
+                    self.logger.log("no_face_while_driving")
+                    print(f"[DriverMonitor] No face detected for {no_face_duration:.1f}s while driving (Speed: {gps_speed:.1f} km/h)")
                 alarm_start_time = datetime.datetime.now()
             
             # Check for UI request to stop speaker
             stop_speaker_request = self._check_stop_speaker_request()
             if stop_speaker_request:
                 self.speaker.alarm_off()
-                alarm_on = False
+                should_activate_speaker = False
                 alarm_start_time = None
                 print("[DriverMonitor] Speaker stopped by UI request")
             
             # Calculate alarm duration and check if popup should be shown
             alarm_duration = 0.0
             show_speaker_popup = False
-            if alarm_on and not stop_speaker_request:
+            if should_activate_speaker and not stop_speaker_request:
                 if alarm_start_time:
                     alarm_duration = (datetime.datetime.now() - alarm_start_time).total_seconds()
                     if alarm_duration >= 1.0:
@@ -157,11 +198,23 @@ class DriverMonitor:
             else:
                 if prev_alarm_on:
                     self.speaker.alarm_off()
-                if not alarm_on:
+                if not should_activate_speaker:
                     alarm_start_time = None
             
             # Update prev_alarm_on AFTER checking state change
-            prev_alarm_on = alarm_on
+            prev_alarm_on = should_activate_speaker
+            
+            # Update UI data bridge (after calculating alarm_duration and show_speaker_popup)
+            # For UI: show alarm_on based on actual drowsiness detection (not just speaker state)
+            # This allows UI to show drowsiness alert even when not driving (without speaker)
+            ui_alarm_on = alarm_on  # Show drowsiness state in UI regardless of driving status
+            self.data_bridge.update_drowsiness_status(
+                ear=ear if face_detected else None,
+                face_detected=face_detected,
+                alarm_on=ui_alarm_on,  # Show drowsiness detection state in UI
+                alarm_duration=alarm_duration,
+                show_speaker_popup=show_speaker_popup
+            )
 
             # =========================================
             # 4) Frame overlay rendering
@@ -219,9 +272,9 @@ class DriverMonitor:
                     )
 
             # =========================================
-            # 5.5) GPS reading
+            # 5.5) GPS position extraction (reuse data read above)
             # =========================================
-            gps_data = self.gps.read_gps()
+            # GPS data already read above for driving detection
             gps_position = None
             if gps_data:
                 gps_position = (gps_data[0], gps_data[1])  # (latitude, longitude)
