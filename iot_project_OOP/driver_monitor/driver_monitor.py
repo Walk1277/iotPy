@@ -85,6 +85,9 @@ class DriverMonitor:
         prev_alarm_on = False
         alarm_start_time = None  # Track when alarm started
         no_face_start_time = None  # Track when no face detected while driving started
+        
+        # Track last registered impact to prevent duplicate registrations
+        last_registered_impact_time = None
 
         # Accelerometer event display text
         accel_event_text = ""
@@ -256,10 +259,16 @@ class DriverMonitor:
                     accel_event_text = self.accel.last_event_text
                     accel_event_time = self.accel.last_event_time
 
-                    # Register impact for report system
+                    # Register impact for report system (only once per impact event)
+                    # Prevent duplicate registrations from the same impact_time
                     impact_time = self.accel.impact_time
-                    if impact_time:
+                    if impact_time and impact_time != last_registered_impact_time:
                         self.report_manager.register_impact(impact_time)
+                        last_registered_impact_time = impact_time
+                        print(f"[DriverMonitor] Impact registered for report system: {impact_time.strftime('%H:%M:%S')}")
+                    elif impact_time == last_registered_impact_time:
+                        # Same impact already registered, skip
+                        pass
 
                 # Display accelerometer event text for 3 seconds
                 if (datetime.datetime.now() - accel_event_time).total_seconds() < 3:

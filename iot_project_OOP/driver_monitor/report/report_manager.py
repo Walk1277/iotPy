@@ -162,6 +162,15 @@ class ReportManager:
 
     def update(self, face_detected, ear=None, ear_threshold=0.2, keyboard_input=None):
         """
+        Update report manager state and check for emergency conditions.
+        
+        Returns:
+            dict: Report status with keys:
+                - status: 'NORMAL', 'ALERT', or 'REPORTING'
+                - message: Status message for UI
+                - remaining_time: Time remaining for response (if ALERT)
+        """
+        """
         Update report manager state. Called every frame.
         
         Args:
@@ -210,13 +219,17 @@ class ReportManager:
             
             condition_text = "eyes closed" if eyes_closed_condition else "no face detected"
             self.logger.log(f"report_alert_triggered: {condition_text}")
+            print(f"[Report] ===== ALERT TRIGGERED =====")
             print(f"[Report] Emergency condition met ({condition_text})! Alert started.")
             print(f"[Report] Impact detected. Monitoring for {REPORT_IMPACT_MONITORING_DURATION}s. Condition: {condition_text}")
-            return {
+            print(f"[Report] Returning ALERT status to trigger UI popup")
+            alert_status = {
                 'status': 'ALERT',
                 'message': 'Touch screen within 10 seconds to cancel report',
                 'remaining_time': REPORT_RESPONSE_TIMEOUT
             }
+            print(f"[Report] Alert status: {alert_status}")
+            return alert_status
         
         # In report mode - check for user response
         if self.report_mode:
