@@ -211,16 +211,18 @@ class ReportManager:
             condition_text = "eyes closed" if eyes_closed_condition else "no face detected"
             self.logger.log(f"report_alert_triggered: {condition_text}")
             print(f"[Report] Emergency condition met ({condition_text})! Alert started.")
+            print(f"[Report] Impact detected. Monitoring for {REPORT_IMPACT_MONITORING_DURATION}s. Condition: {condition_text}")
             return {
                 'status': 'ALERT',
-                'message': 'Press any key within 10 seconds to cancel report',
+                'message': 'Touch screen within 10 seconds to cancel report',
                 'remaining_time': REPORT_RESPONSE_TIMEOUT
             }
         
         # In report mode - check for user response
         if self.report_mode:
-            # Check keyboard input (current implementation)
+            # Check keyboard input or UI response (current implementation)
             if keyboard_input is not None:
+                # Handle both keyboard input and UI response (UI_RESPONSE string)
                 self.user_responded = True
                 self.report_mode = False
                 self.eyes_closed_start_time = None
@@ -228,7 +230,10 @@ class ReportManager:
                 self.alert_start_time = None
                 self.sms_sent = False  # Reset SMS flag
                 self.logger.log("report_cancelled")
-                print("[Report] User responded. Report cancelled.")
+                if keyboard_input == "UI_RESPONSE":
+                    print("[Report] User responded via UI (touch screen). Report cancelled.")
+                else:
+                    print(f"[Report] User responded (keyboard: '{keyboard_input}'). Report cancelled.")
                 return {'status': 'NORMAL', 'message': '', 'remaining_time': 0}
             
             # Check UI callback (for future implementation)
@@ -252,7 +257,7 @@ class ReportManager:
                 if remaining > 0:
                     return {
                         'status': 'ALERT',
-                        'message': f'Press any key within {remaining:.1f} seconds to cancel report',
+                        'message': f'Touch screen within {remaining:.1f} seconds to cancel report',
                         'remaining_time': remaining
                     }
                 else:
@@ -264,6 +269,7 @@ class ReportManager:
                     self.logger.log("report_triggered")
                     
                     # Send SMS report
+                    print("[Report] Timeout reached. No user response. Proceeding with automatic report...")
                     self._send_sms_report()
                     
                     print("[Report] No response received. Report process initiated.")

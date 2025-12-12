@@ -133,9 +133,9 @@ class DriverMonitor:
                 is_driving = gps_speed >= speed_threshold
             
             # Determine if speaker should be active
-            # Speaker should be active if:
+            # Speaker should be active when:
             # 1. Driving AND (drowsiness detected OR no face for 10+ seconds)
-            # 2. Not driving: speaker should NOT be active (only show alert in UI)
+            # 2. Not driving: do NOT activate speaker (parked state)
             should_activate_speaker = False
             no_face_duration = 0.0
             
@@ -163,7 +163,7 @@ class DriverMonitor:
                     no_face_start_time = None
             else:
                 # When not driving: do NOT activate speaker
-                # Even if drowsiness detected, only show alert in UI
+                # Even if drowsiness detected or no face, only show alert in UI
                 should_activate_speaker = False
                 no_face_start_time = None  # Reset timer when not driving
             
@@ -323,48 +323,50 @@ class DriverMonitor:
             if self._frame_count % 60 == 0:
                 self.data_bridge.update_log_summary()
             
-            # Handle report system alerts
+            # Handle report system alerts (accident detection)
+            # Note: Do NOT activate speaker for accident detection - only show UI popup
             if report_status['status'] == 'ALERT':
-                # Show alert message
+                # Show alert message on screen (if window is displayed)
                 message = report_status['message']
                 remaining = report_status['remaining_time']
                 
-                # Display message on screen
-                frame = self.overlay.put_text(
-                    frame,
-                    message,
-                    (10, imgH // 2),
-                    (0, 0, 255),
-                    scale=1.2
-                )
-                frame = self.overlay.put_text(
-                    frame,
-                    f"Time remaining: {remaining:.1f}s",
-                    (10, imgH // 2 + 40),
-                    (255, 0, 0),
-                    scale=1.0
-                )
+                # Display message on screen (only if monitor window is shown)
+                if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
+                    frame = self.overlay.put_text(
+                        frame,
+                        message,
+                        (10, imgH // 2),
+                        (0, 0, 255),
+                        scale=1.2
+                    )
+                    frame = self.overlay.put_text(
+                        frame,
+                        f"Time remaining: {remaining:.1f}s",
+                        (10, imgH // 2 + 40),
+                        (255, 0, 0),
+                        scale=1.0
+                    )
                 
-                # Play alert sound
-                self.speaker.alarm_on()
+                # Do NOT activate speaker for accident detection
+                # UI popup will be shown instead
                 
             elif report_status['status'] == 'REPORTING':
                 # Report process initiated
-                frame = self.overlay.put_text(
-                    frame,
-                    "!!! REPORT PROCESS INITIATED !!!",
-                    (10, imgH // 2),
-                    (0, 0, 255),
-                    scale=1.5
-                )
-                self.speaker.alarm_on()
-                # Stop alarm after showing message
-                # (In real implementation, this would trigger actual report process)
+                if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
+                    frame = self.overlay.put_text(
+                        frame,
+                        "!!! REPORT PROCESS INITIATED !!!",
+                        (10, imgH // 2),
+                        (0, 0, 255),
+                        scale=1.5
+                    )
+                
+                # Do NOT activate speaker for accident reporting
+                # SMS has been sent, no need for speaker
                 
             elif report_status['status'] == 'NORMAL':
-                # Normal state - stop alarm if it was on
-                if report_status.get('was_alerting', False):
-                    self.speaker.alarm_off()
+                # Normal state - no action needed for speaker
+                pass
 
             # ============================
             # 6) Display and keyboard input
