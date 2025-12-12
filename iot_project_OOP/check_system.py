@@ -274,17 +274,41 @@ def test_sms():
         # Test SMS sending (actually send a test message)
         try:
             from solapi.model import RequestMessage
+            import time
+            
+            # Read GPS data
+            gps_data = None
+            gps_position_str = "N/A"
+            if gps:
+                try:
+                    gps.initialize()
+                    # Try to read GPS data multiple times
+                    for i in range(5):
+                        gps_data = gps.read_gps()
+                        if gps_data and gps_data[0] != 0.0 and gps_data[1] != 0.0:
+                            lat, lon, alt, speed = gps_data
+                            gps_position_str = f"Lat: {lat:.6f}, Lon: {lon:.6f}"
+                            break
+                        time.sleep(0.2)
+                    gps.close()
+                except Exception as gps_error:
+                    gps_position_str = f"GPS read error: {str(gps_error)}"
+            
+            # Create message with GPS data
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            message_text = f"[System Test] {timestamp}\nSystem check test message.\nGPS: {gps_position_str}"
+            
             test_message = RequestMessage(
                 from_=config.SMS_FROM_NUMBER,
                 to=config.SMS_TO_NUMBER,
-                text=f"[System Test] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - System check test message."
+                text=message_text
             )
             
             response = report_manager.sms_service.send(test_message)
             return {
                 "status": "OK",
                 "message": "SMS test sending successful",
-                "details": f"Message ID: {response.group_info.group_id}, Receiver: {config.SMS_TO_NUMBER}"
+                "details": f"Message ID: {response.group_info.group_id}, Receiver: {config.SMS_TO_NUMBER}, GPS: {gps_position_str}"
             }
         except Exception as e:
             return {
