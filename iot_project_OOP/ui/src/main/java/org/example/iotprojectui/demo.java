@@ -217,7 +217,13 @@ public class demo extends Application {
         autoReportSettingsBtn.setStyle("-fx-font-size: 11px;");
         autoReportSettingsBtn.setOnAction(e -> showAutoReportSettingsScreen());
         
-        panel.getChildren().addAll(title, updateBtn, personalSettingsBtn, drowsinessSettingsBtn, autoReportSettingsBtn);
+        Button systemCheckBtn = new Button("시스템 체크");
+        systemCheckBtn.setPrefWidth(Double.MAX_VALUE);
+        systemCheckBtn.setPrefHeight(30);
+        systemCheckBtn.setStyle("-fx-font-size: 11px;");
+        systemCheckBtn.setOnAction(e -> showSystemCheckScreen());
+        
+        panel.getChildren().addAll(title, updateBtn, personalSettingsBtn, drowsinessSettingsBtn, autoReportSettingsBtn, systemCheckBtn);
         
         return panel;
     }
@@ -1174,6 +1180,208 @@ public class demo extends Application {
         content.getChildren().addAll(backBtn, title, autoReportCheck, separator1,
             fromPhoneLabel, fromPhoneField, toPhoneLabel, toPhoneField, separator2,
             systemLabel, clearLogsBtn, saveBtn);
+        detailScreen.setContent(content);
+        detailScreen.setFitToWidth(true);
+        
+        mainContainer.getChildren().clear();
+        mainContainer.getChildren().add(detailScreen);
+    }
+    
+    /** Show system check screen */
+    private void showSystemCheckScreen() {
+        ScrollPane detailScreen = new ScrollPane();
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        
+        Button backBtn = new Button("← 뒤로");
+        backBtn.setOnAction(e -> {
+            mainContainer.getChildren().clear();
+            mainContainer.getChildren().add(createMainScreen());
+        });
+        
+        Label title = new Label("시스템 체크");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        
+        Label descriptionLabel = new Label("각 센서 및 기능이 정상적으로 작동하는지 확인합니다.");
+        descriptionLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+        descriptionLabel.setWrapText(true);
+        
+        TextArea resultArea = new TextArea();
+        resultArea.setEditable(false);
+        resultArea.setPrefRowCount(20);
+        resultArea.setStyle("-fx-font-size: 11px;");
+        resultArea.setText("시스템 체크를 실행하려면 '시스템 체크 실행' 버튼을 클릭하세요.\n\n");
+        
+        Button checkBtn = new Button("시스템 체크 실행");
+        checkBtn.setPrefWidth(Double.MAX_VALUE);
+        checkBtn.setStyle("-fx-font-size: 14px;");
+        
+        checkBtn.setOnAction(e -> {
+            checkBtn.setDisable(true);
+            resultArea.clear();
+            resultArea.appendText("=== 시스템 체크 시작 ===\n");
+            resultArea.appendText("각 센서와 기능을 확인하는 중...\n\n");
+            
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String projectDir = System.getProperty("user.dir");
+                    if (projectDir.contains("ui")) {
+                        projectDir = new java.io.File(projectDir).getParent();
+                    }
+                    
+                    String[] pythonPaths = {"python3", "python"};
+                    String pythonCmd = "python3";
+                    for (String path : pythonPaths) {
+                        try {
+                            Process testProcess = new ProcessBuilder(path, "--version").start();
+                            if (testProcess.waitFor() == 0) {
+                                pythonCmd = path;
+                                break;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    
+                    String scriptPathTemp = projectDir + "/check_system.py";
+                    java.io.File scriptFile = new java.io.File(scriptPathTemp);
+                    
+                    if (!scriptFile.exists()) {
+                        String altPath = "/home/pi/iot_project_OOP/check_system.py";
+                        if (new java.io.File(altPath).exists()) {
+                            scriptPathTemp = altPath;
+                            projectDir = "/home/pi/iot_project_OOP";
+                        }
+                    }
+                    
+                    final String scriptPath = scriptPathTemp;
+                    final String finalProjectDir = projectDir;
+                    
+                    if (!new java.io.File(scriptPath).exists()) {
+                        Platform.runLater(() -> {
+                            checkBtn.setDisable(false);
+                            resultArea.appendText("[ERROR] check_system.py 파일을 찾을 수 없습니다.\n");
+                            resultArea.appendText("경로: " + scriptPath + "\n");
+                        });
+                        return;
+                    }
+                    
+                    ProcessBuilder pb = new ProcessBuilder(pythonCmd, scriptPath);
+                    pb.directory(new java.io.File(finalProjectDir));
+                    Process process = pb.start();
+                    
+                    // Read stdout (JSON result)
+                    BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    // Read stderr (progress messages)
+                    BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                    
+                    StringBuilder jsonOutput = new StringBuilder();
+                    String line;
+                    
+                    // Read stderr for progress
+                    while ((line = stderrReader.readLine()) != null) {
+                        final String logLine = line;
+                        Platform.runLater(() -> {
+                            resultArea.appendText(logLine + "\n");
+                            resultArea.setScrollTop(Double.MAX_VALUE);
+                        });
+                    }
+                    
+                    // Read stdout for JSON result
+                    while ((line = stdoutReader.readLine()) != null) {
+                        jsonOutput.append(line).append("\n");
+                    }
+                    
+                    int exitCode = process.waitFor();
+                    
+                    // Parse and display JSON results
+                    Platform.runLater(() -> {
+                        checkBtn.setDisable(false);
+                        
+                        try {
+                            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                            com.fasterxml.jackson.databind.JsonNode results = mapper.readTree(jsonOutput.toString());
+                            
+                            resultArea.appendText("\n=== 체크 결과 ===\n\n");
+                            
+                            if (results.has("checks")) {
+                                com.fasterxml.jackson.databind.JsonNode checks = results.get("checks");
+                                
+                                // Camera check
+                                if (checks.has("camera")) {
+                                    com.fasterxml.jackson.databind.JsonNode camera = checks.get("camera");
+                                    String status = camera.get("status").asText();
+                                    String message = camera.get("message").asText();
+                                    String details = camera.has("details") ? camera.get("details").asText() : "";
+                                    String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
+                                    resultArea.appendText(String.format("%s 카메라: %s\n   %s\n", statusIcon, message, details));
+                                }
+                                
+                                // Accelerometer check
+                                if (checks.has("accelerometer")) {
+                                    com.fasterxml.jackson.databind.JsonNode accel = checks.get("accelerometer");
+                                    String status = accel.get("status").asText();
+                                    String message = accel.get("message").asText();
+                                    String details = accel.has("details") ? accel.get("details").asText() : "";
+                                    String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
+                                    resultArea.appendText(String.format("%s 가속도 센서: %s\n   %s\n", statusIcon, message, details));
+                                }
+                                
+                                // GPS check
+                                if (checks.has("gps")) {
+                                    com.fasterxml.jackson.databind.JsonNode gps = checks.get("gps");
+                                    String status = gps.get("status").asText();
+                                    String message = gps.get("message").asText();
+                                    String details = gps.has("details") ? gps.get("details").asText() : "";
+                                    String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
+                                    resultArea.appendText(String.format("%s GPS: %s\n   %s\n", statusIcon, message, details));
+                                }
+                                
+                                // Speaker check
+                                if (checks.has("speaker")) {
+                                    com.fasterxml.jackson.databind.JsonNode speaker = checks.get("speaker");
+                                    String status = speaker.get("status").asText();
+                                    String message = speaker.get("message").asText();
+                                    String details = speaker.has("details") ? speaker.get("details").asText() : "";
+                                    String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
+                                    resultArea.appendText(String.format("%s 스피커: %s\n   %s\n", statusIcon, message, details));
+                                }
+                                
+                                // SMS check
+                                if (checks.has("sms")) {
+                                    com.fasterxml.jackson.databind.JsonNode sms = checks.get("sms");
+                                    String status = sms.get("status").asText();
+                                    String message = sms.get("message").asText();
+                                    String details = sms.has("details") ? sms.get("details").asText() : "";
+                                    String statusIcon = status.equals("OK") ? "✅" : status.equals("WARNING") ? "⚠️" : "❌";
+                                    resultArea.appendText(String.format("%s SMS (자동 신고): %s\n   %s\n", statusIcon, message, details));
+                                }
+                            }
+                            
+                            resultArea.appendText("\n=== 체크 완료 ===\n");
+                            resultArea.setScrollTop(Double.MAX_VALUE);
+                            
+                            if (exitCode == 0) {
+                                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                                alert.setTitle("시스템 체크 완료");
+                                alert.setHeaderText("모든 체크가 완료되었습니다.");
+                                alert.setContentText("결과를 확인하세요.");
+                                alert.showAndWait();
+                            }
+                        } catch (Exception parseEx) {
+                            resultArea.appendText("\n[ERROR] 결과 파싱 실패: " + parseEx.getMessage() + "\n");
+                            resultArea.appendText("원본 출력:\n" + jsonOutput.toString() + "\n");
+                        }
+                    });
+                } catch (Exception ex) {
+                    Platform.runLater(() -> {
+                        checkBtn.setDisable(false);
+                        resultArea.appendText("[ERROR] " + ex.getMessage() + "\n");
+                        ex.printStackTrace();
+                    });
+                }
+            });
+        });
+        
+        content.getChildren().addAll(backBtn, title, descriptionLabel, resultArea, checkBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         

@@ -49,7 +49,11 @@ class DriverMonitor:
         self.camera = CameraManager(cam_index)
         self.fatigue = FatigueDetector()
         self.accel = AccelerometerDetector()
-        self.gps = GPSManager(simulate=True)  # Use simulation mode by default
+        # Use GPS_ENABLED from config to determine if GPS should be simulated
+        import importlib
+        importlib.reload(config)
+        gps_simulate = not config.GPS_ENABLED  # If GPS_ENABLED is False, use simulation
+        self.gps = GPSManager(simulate=gps_simulate)
         self.speaker = SpeakerController()
         self.overlay = OverlayRenderer()
         self.logger = EventLogger()
