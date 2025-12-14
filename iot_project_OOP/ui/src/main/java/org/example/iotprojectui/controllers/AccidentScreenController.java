@@ -1,8 +1,11 @@
 package org.example.iotprojectui.controllers;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
@@ -52,6 +55,24 @@ public class AccidentScreenController implements BaseScreenController {
             accidentInfo.getChildren().addAll(gLabel, impactLabel, gpsLabel);
         }
         
+        // Auto Report Popup Test Button
+        Label autoReportLabel = new Label("Accident Auto Report Popup Test");
+        autoReportLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        
+        Label autoReportDesc = new Label("Test if the popup that appears during accident detection works correctly.");
+        autoReportDesc.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+        autoReportDesc.setWrapText(true);
+        
+        Button testPopupBtn = new Button("Test Popup");
+        testPopupBtn.setStyle("-fx-font-size: 14px; -fx-pref-width: 200;");
+        testPopupBtn.setOnAction(e -> {
+            testAccidentPopup(container);
+        });
+        
+        VBox autoReportBox = new VBox(10);
+        autoReportBox.getChildren().addAll(autoReportLabel, autoReportDesc, testPopupBtn);
+        autoReportBox.setPadding(new Insets(10, 0, 10, 0));
+        
         Button testBtn = new Button("Test Accident Detection");
         testBtn.setOnAction(e -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -61,12 +82,62 @@ public class AccidentScreenController implements BaseScreenController {
             alert.showAndWait();
         });
         
-        content.getChildren().addAll(backBtn, title, accidentInfo, testBtn);
+        content.getChildren().addAll(backBtn, title, accidentInfo, autoReportBox, testBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         
         container.getChildren().clear();
         container.getChildren().add(detailScreen);
+    }
+    
+    /**
+     * Test accident popup - shows the same popup that appears during actual accident detection
+     * This is a safe test that doesn't interfere with the actual accident detection system
+     */
+    private void testAccidentPopup(StackPane container) {
+        Platform.runLater(() -> {
+            // Create the same Alert dialog as MainScreenController.showResponseRequestModal
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("ACCIDENT DETECTED!");
+            alert.setHeaderText("⚠️ Accident Detected!");
+            
+            String message = "Test: Accident auto report popup is working correctly.";
+            double remainingTime = 10.0;
+            int seconds = (int) Math.ceil(remainingTime);
+            
+            String contentText = message + "\n\n" +
+                    "Time remaining: " + seconds + " seconds\n\n" +
+                    "Click 'Cancel Report' button to cancel the report.";
+            alert.setContentText(contentText);
+            
+            // Add Cancel Report button (same as MainScreenController)
+            ButtonType cancelReportButton = new ButtonType("Cancel Report", ButtonBar.ButtonData.CANCEL_CLOSE);
+            alert.getButtonTypes().setAll(cancelReportButton, ButtonType.CLOSE);
+            
+            // Set alert to be modal and always on top
+            if (container.getScene() != null && container.getScene().getWindow() != null) {
+                alert.initOwner(container.getScene().getWindow());
+            }
+            
+            // Show alert and wait for user response
+            alert.showAndWait().ifPresent(response -> {
+                if (response == cancelReportButton) {
+                    // User clicked "Cancel Report" - show confirmation
+                    Alert confirmAlert = new Alert(Alert.AlertType.INFORMATION);
+                    confirmAlert.setTitle("Test Complete");
+                    confirmAlert.setHeaderText("Popup Test Successful");
+                    confirmAlert.setContentText("Accident auto report popup is working correctly.\n'Cancel Report' button is functioning properly.");
+                    confirmAlert.showAndWait();
+                } else {
+                    // User closed the alert
+                    Alert infoAlert = new Alert(Alert.AlertType.INFORMATION);
+                    infoAlert.setTitle("Test Complete");
+                    infoAlert.setHeaderText("Popup Test Complete");
+                    infoAlert.setContentText("Accident auto report popup was displayed correctly.");
+                    infoAlert.showAndWait();
+                }
+            });
+        });
     }
 }
 

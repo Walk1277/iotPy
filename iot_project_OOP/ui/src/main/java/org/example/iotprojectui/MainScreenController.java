@@ -293,16 +293,16 @@ public class MainScreenController {
             // Create Alert dialog (like speaker popup)
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("ACCIDENT DETECTED!");
-            alert.setHeaderText("⚠️ 사고가 감지되었습니다!");
+            alert.setHeaderText("⚠️ Accident Detected!");
             
             int seconds = (int) Math.ceil(remainingTime);
             String contentText = message + "\n\n" +
-                    "남은 시간: " + seconds + "초\n\n" +
-                    "리포트를 취소하려면 '리포트 취소' 버튼을 클릭하세요.";
+                    "Time remaining: " + seconds + " seconds\n\n" +
+                    "Click 'Cancel Report' button to cancel the report.";
             alert.setContentText(contentText);
             
             // Add Cancel Report button
-            ButtonType cancelReportButton = new ButtonType("리포트 취소", ButtonBar.ButtonData.CANCEL_CLOSE);
+            ButtonType cancelReportButton = new ButtonType("Cancel Report", ButtonBar.ButtonData.CANCEL_CLOSE);
             alert.getButtonTypes().setAll(cancelReportButton, ButtonType.CLOSE);
             
             // Set alert to be modal and always on top

@@ -40,6 +40,95 @@ fi
 # Create data directory if it doesn't exist
 mkdir -p data
 
+# Check USB webcam availability
+echo "📹 Checking USB webcam availability..."
+USB_CAM_FOUND=false
+
+# Method 1: Check /dev/video* devices
+if ls /dev/video* 1> /dev/null 2>&1; then
+    VIDEO_DEVICES=$(ls /dev/video* 2>/dev/null | wc -l)
+    echo "   Found $VIDEO_DEVICES video device(s):"
+    ls -1 /dev/video* 2>/dev/null | while read device; do
+        echo "     - $device"
+    done
+    USB_CAM_FOUND=true
+fi
+
+# Method 2: Check with v4l2-ctl if available
+if command -v v4l2-ctl &> /dev/null; then
+    if v4l2-ctl --list-devices &> /dev/null; then
+        echo "   V4L2 devices:"
+        v4l2-ctl --list-devices 2>/dev/null | grep -A 1 "video" | head -10
+        USB_CAM_FOUND=true
+    fi
+fi
+
+# Method 3: Check with lsusb for USB video devices
+if command -v lsusb &> /dev/null; then
+    USB_VIDEO_DEVICES=$(lsusb | grep -i "video\|camera\|webcam" | wc -l)
+    if [ "$USB_VIDEO_DEVICES" -gt 0 ]; then
+        echo "   USB video devices found:"
+        lsusb | grep -i "video\|camera\|webcam"
+        USB_CAM_FOUND=true
+    fi
+fi
+
+# Method 4: Try to open camera with Python (most reliable)
+if command -v python3 &> /dev/null; then
+    CAM_TEST=$(python3 -c "
+import sys
+try:
+    import cv2
+    # Try to open camera at index 0
+    cap = cv2.VideoCapture(0)
+    if cap.isOpened():
+        ret, frame = cap.read()
+        if ret and frame is not None:
+            print('OK')
+        else:
+            print('FAIL')
+        cap.release()
+    else:
+        print('FAIL')
+        # Try index 1
+        cap = cv2.VideoCapture(1)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret and frame is not None:
+                print('OK')
+            else:
+                print('FAIL')
+            cap.release()
+        else:
+            print('FAIL')
+except Exception as e:
+    print('FAIL')
+" 2>/dev/null)
+    
+    if [ "$CAM_TEST" = "OK" ]; then
+        echo "   ✅ USB webcam is accessible and working"
+        USB_CAM_FOUND=true
+    else
+        echo "   ⚠️  USB webcam may not be accessible (will try PiCamera2 on Raspberry Pi)"
+    fi
+fi
+
+if [ "$USB_CAM_FOUND" = false ]; then
+    echo "   ⚠️  Warning: No USB webcam detected"
+    echo "   On Raspberry Pi, the system will try to use PiCamera2 as fallback"
+    echo "   On Linux, please connect a USB webcam or check camera permissions"
+    echo ""
+    read -p "Continue anyway? (y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Exiting..."
+        exit 1
+    fi
+else
+    echo "   ✅ USB webcam check completed"
+fi
+echo ""
+
 # Start Python backend in background
 echo "🚀 Starting Python backend..."
 python3 main.py start > backend.log 2>&1 &
