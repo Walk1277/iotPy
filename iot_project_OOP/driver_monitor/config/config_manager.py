@@ -42,7 +42,8 @@ class ConfigManager:
         try:
             if self._config_file_path and os.path.exists(self._config_file_path):
                 return os.path.getmtime(self._config_file_path)
-        except:
+        except (OSError, PermissionError):
+            # File access error, return 0 to force reload
             pass
         return 0
     

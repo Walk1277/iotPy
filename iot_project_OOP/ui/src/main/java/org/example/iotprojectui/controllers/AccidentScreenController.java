@@ -55,15 +55,6 @@ public class AccidentScreenController implements BaseScreenController {
             accidentInfo.getChildren().addAll(gLabel, impactLabel, gpsLabel);
         }
         
-        Button testBtn = new Button("Test Accident Detection");
-        testBtn.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Accident Detection");
-            alert.setHeaderText("Accident detected!");
-            alert.setContentText("Touch the screen within 10 seconds to cancel the report.");
-            alert.showAndWait();
-        });
-        
         // Emergency Report Button - Triggers the actual emergency report popup
         Button emergencyReportBtn = new Button("Trigger Emergency Report");
         emergencyReportBtn.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 10px 20px;");
@@ -83,7 +74,7 @@ public class AccidentScreenController implements BaseScreenController {
             }
         });
         
-        content.getChildren().addAll(backBtn, title, accidentInfo, testBtn, emergencyReportBtn);
+        content.getChildren().addAll(backBtn, title, accidentInfo, emergencyReportBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         

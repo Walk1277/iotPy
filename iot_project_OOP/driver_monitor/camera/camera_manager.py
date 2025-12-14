@@ -30,29 +30,49 @@ class CameraManager:
         self.cap = None
 
     def initialize(self):
-        if IS_RPI:
+        """
+        Initialize camera with priority: USB webcam first, then CSI camera (PiCamera2).
+        
+        Priority order:
+        1. USB webcam (if available)
+        2. CSI camera (PiCamera2) - only on Raspberry Pi if USB webcam fails
+        """
+        # Try USB webcam first
+        usb_success = False
+        try:
+            print(f"[Camera] Attempting to initialize USB webcam (index: {self.index})...")
+            self._init_usb_cam()
+            usb_success = True
+            print("[Camera] USB webcam initialized successfully.")
+        except Exception as e:
+            print(f"[Camera] USB webcam initialization failed: {e}")
+            print("[Camera] Will try CSI camera (PiCamera2) if available...")
+            usb_success = False
+        
+        # If USB webcam failed and we're on Raspberry Pi, try CSI camera
+        if not usb_success and IS_RPI:
             try:
+                print("[Camera] Attempting to initialize CSI camera (PiCamera2)...")
                 self.picam2 = Picamera2()
                 self.picam2.preview_configuration.main.size = (CAM_WIDTH, CAM_HEIGHT)
                 self.picam2.preview_configuration.main.format = "RGB888"
                 self.picam2.preview_configuration.align()
                 self.picam2.configure("preview")
                 self.picam2.start()
-                print("[Camera] PiCamera2 initialized.")
-                # PiCamera2 성공 시 index는 무시됨 (정상 동작)
+                print("[Camera] PiCamera2 (CSI camera) initialized successfully.")
             except Exception as e:
                 ErrorHandler.handle_camera_error(
                     error=e,
                     context="PiCamera2 initialization",
                     logger=None
                 )
-                print("[Camera] Falling back to USB webcam...")
-                # 라즈베리파이에서 USB 웹캠 폴백 시 인덱스 0을 기본으로 사용
-                # (라즈베리파이에서는 USB 웹캠이 보통 인덱스 0)
-                fallback_index = 0 if self.index != 0 else self.index
-                self._init_usb_cam_with_index(fallback_index)
-        else:
-            self._init_usb_cam()
+                print("[Camera] CSI camera initialization also failed.")
+                # Both USB and CSI failed, raise the error
+                if not usb_success:
+                    raise RuntimeError("Both USB webcam and CSI camera initialization failed.")
+        elif not usb_success:
+            # Not on Raspberry Pi and USB failed
+            raise RuntimeError("USB webcam initialization failed and CSI camera is not available (not on Raspberry Pi).")
 
     def _init_usb_cam(self, index=None):
         """USB 웹캠 초기화 (기본값: self.index 사용)"""
@@ -81,8 +101,10 @@ class CameraManager:
 
     def get_frames(self):
         """
-        frame = picam2.capture_array()
-        frame_rgb = picam2.capture_array()
+        Get frames from camera (PiCamera2 or USB webcam).
+        
+        Returns:
+            tuple: (frame, frame_rgb) - BGR frame and RGB frame
         """
         if IS_RPI and self.picam2:
             frame = self.picam2.capture_array()

@@ -29,17 +29,32 @@ class AccelerometerDetector:
 
     def initialize(self):
         if not IS_RPI:
-            print("[Accel] Not RPi environment.")
+            print("[Accel] Not RPi environment. Accelerometer will not be available.")
+            print("[Accel] To use accelerometer, run on Raspberry Pi with ADXL345 connected via I2C.")
             return
 
         try:
+            print("[Accel] Attempting to initialize ADXL345...")
             i2c = busio.I2C(board.SCL, board.SDA)
+            print("[Accel] I2C bus initialized.")
             self.accel = adafruit_adxl34x.ADXL345(i2c)
-            print("[Accel] ADXL345 initialized.")
+            print("[Accel] ADXL345 initialized successfully.")
+        except RuntimeError as e:
+            print(f"[Accel] ADXL345 not found on I2C bus: {e}")
+            print("[Accel] Please check:")
+            print("[Accel]   1. ADXL345 is connected to I2C pins (SDA/SCL)")
+            print("[Accel]   2. I2C is enabled: sudo raspi-config -> Interface Options -> I2C -> Enable")
+            print("[Accel]   3. Check I2C devices: sudo i2cdetect -y 1")
+            self.accel = None
         except Exception as e:
-            print(f"[Accel] init failed: {e}")
+            print(f"[Accel] Initialization failed: {type(e).__name__}: {e}")
+            print("[Accel] Accelerometer will not be available.")
             self.accel = None
 
+    def is_available(self):
+        """Check if accelerometer is available."""
+        return self.accel is not None
+    
     def read_accel(self):
         if self.accel is None:
             return None, None

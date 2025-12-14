@@ -15,7 +15,9 @@ LOG_FILE = "driving_events.log"
 
 CAM_WIDTH = 800
 CAM_HEIGHT = 480
-CAMERA_INDEX = 2  # 0: 기본 내장 카메라, 1+: USB 웹캠 (리눅스에서 lsusb 또는 v4l2-ctl --list-devices로 확인)
+CAMERA_INDEX = 0  # 0: 기본 내장 카메라, 1+: USB 웹캠 (리눅스에서 lsusb 또는 v4l2-ctl --list-devices로 확인)
+# 카메라 우선순위: USB 웹캠 우선 사용, 없으면 CSI 카메라(PiCamera2) 자동 사용 (라즈베리파이만)
+# USE_PICAMERA2 설정은 더 이상 사용되지 않음 (자동 감지)
 
 # Report system settings
 REPORT_IMPACT_MONITORING_DURATION = 60.0  # Monitor for 1 minute after last impact
@@ -25,10 +27,10 @@ REPORT_RESPONSE_TIMEOUT = 10.0  # seconds to wait for user response
 AUTO_REPORT_ENABLED = True
 
 # SMS report settings (SOLAPI)
-SMS_API_KEY = "NCSAQFYKNA3STO4Y"  # Replace with your SOLAPI API key
-SMS_API_SECRET = "AGRKNIE1BS6VKQQCXYACG6Z9HAW1XKXA"  # Replace with your SOLAPI API secret
-SMS_FROM_NUMBER = "010-7220-5917"
-SMS_TO_NUMBER = "010-4090-7445"
+SMS_API_KEY = "NCSCIXA2D5BAFBTJ"  # Replace with your SOLAPI API key
+SMS_API_SECRET = "DJ33MVDAPVFQPYOIWDENH2NUHCJLWG4H"  # Replace with your SOLAPI API secret
+SMS_FROM_NUMBER = "010-4090-7445"
+SMS_TO_NUMBER = "010-7220-5917"
 SMS_ENABLED = True  # Set to True to enable SMS reporting
 
 # GPS settings
@@ -42,5 +44,3 @@ NO_FACE_WHILE_DRIVING_TIMEOUT = 10.0  # seconds - Time to wait before activating
 UI_DATA_DIR = "data"  # Relative to project root
 UI_DROWSINESS_JSON = "drowsiness.json"  # File name for drowsiness status
 UI_STATUS_JSON = "status.json"  # File name for system status
-SMS_FROM_NUMBER = "010-7220-5917"
-SMS_TO_NUMBER = "010-4090-7445"

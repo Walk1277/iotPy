@@ -53,38 +53,12 @@ import config
 
 class DriverMonitor:
     def __init__(self, cam_index=0):
-        # #region agent log
-        import json
-        try:
-            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"location":"driver_monitor.py:53","message":"DriverMonitor.__init__ entry","data":{"cam_index":cam_index},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
-        except: pass
-        # #endregion
-        
         self.cam_index = cam_index
         
         # Initialize config manager (singleton)
-        # #region agent log
-        try:
-            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"location":"driver_monitor.py:60","message":"Before ConfigManager init","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + '\n')
-        except: pass
-        # #endregion
         self.config_manager = ConfigManager()
-        # #region agent log
-        try:
-            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"location":"driver_monitor.py:62","message":"After ConfigManager init","data":{"config_manager_exists":self.config_manager is not None},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + '\n')
-        except: pass
-        # #endregion
         
         # Initialize components
-        # #region agent log
-        try:
-            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"location":"driver_monitor.py:66","message":"Before component initialization","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
-        except: pass
-        # #endregion
         try:
             self.camera = CameraManager(cam_index)
             self.fatigue = FatigueDetector()
@@ -103,46 +77,14 @@ class DriverMonitor:
             self.drowsiness_state = DrowsinessState(logger=self.logger, config_manager=self.config_manager)
             self.frame_processor = FrameProcessor(overlay_renderer=self.overlay)
         except Exception as e:
-            # #region agent log
-            try:
-                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"location":"driver_monitor.py:85","message":"Component init error","data":{"error_type":type(e).__name__,"error_msg":str(e)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
-            except: pass
-            # #endregion
             raise
 
         self.running = True
-        # #region agent log
-        try:
-            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"location":"driver_monitor.py:90","message":"DriverMonitor.__init__ exit","data":{"running":self.running},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
-        except: pass
-        # #endregion
 
     def initialize(self):
         """Initialize all components."""
-        # #region agent log
-        import json
         try:
-            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"location":"driver_monitor.py:95","message":"DriverMonitor.initialize entry","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
-        except: pass
-        # #endregion
-        
-        try:
-            # #region agent log
-            try:
-                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"location":"driver_monitor.py:100","message":"Before camera.initialize","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
-            except: pass
-            # #endregion
             self.camera.initialize()
-            # #region agent log
-            try:
-                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"location":"driver_monitor.py:104","message":"After camera.initialize","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
-            except: pass
-            # #endregion
 
             # ADXL345
             self.accel.initialize()
@@ -154,19 +96,7 @@ class DriverMonitor:
             self.speaker.initialize()
 
             self.logger.log("Start program")
-            # #region agent log
-            try:
-                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"location":"driver_monitor.py:118","message":"DriverMonitor.initialize exit","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
-            except: pass
-            # #endregion
         except Exception as e:
-            # #region agent log
-            try:
-                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"location":"driver_monitor.py:121","message":"Initialize error","data":{"error_type":type(e).__name__,"error_msg":str(e)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
-            except: pass
-            # #endregion
             raise
 
     def run(self):
@@ -278,7 +208,7 @@ class DriverMonitor:
             accel_data = None
             event = None
 
-            if self.accel.accel:
+            if self.accel.is_available():
                 accel_data, event = self.accel.read_accel()
 
                 if event:
@@ -336,7 +266,7 @@ class DriverMonitor:
                 impact_detected=(event is not None),
                 report_status=report_status,
                 gps_position=gps_position,
-                sensor_status=f"Camera: {'OK' if face_detected else 'Waiting'} / Accelerometer: {'OK' if self.accel.accel else 'Waiting'} / GPS: {'OK' if gps_position else 'Waiting'}"
+                sensor_status=f"Camera: {'OK' if face_detected else 'Waiting'} / Accelerometer: {'OK' if self.accel.is_available() else 'Waiting'} / GPS: {'OK' if gps_position else 'Waiting'}"
             )
             
             # Update log summary periodically (every 60 frames ~ 2 seconds at 30fps)
@@ -446,7 +376,8 @@ class DriverMonitor:
                             # Delete the response file after reading
                             try:
                                 os.remove(path)
-                            except:
+                            except (OSError, PermissionError) as e:
+                                # File may be locked or already deleted, ignore
                                 pass
                             return "UI_RESPONSE"  # Return a marker string
                 except Exception as e:
@@ -481,7 +412,8 @@ class DriverMonitor:
                             # Delete the stop request file after reading
                             try:
                                 os.remove(path)
-                            except:
+                            except (OSError, PermissionError) as e:
+                                # File may be locked or already deleted, ignore
                                 pass
                             return True
                 except Exception as e:
