@@ -39,6 +39,7 @@ class CameraManager:
                 self.picam2.configure("preview")
                 self.picam2.start()
                 print("[Camera] PiCamera2 initialized.")
+                # PiCamera2 성공 시 index는 무시됨 (정상 동작)
             except Exception as e:
                 ErrorHandler.handle_camera_error(
                     error=e,
@@ -46,20 +47,30 @@ class CameraManager:
                     logger=None
                 )
                 print("[Camera] Falling back to USB webcam...")
-                self._init_usb_cam()
+                # 라즈베리파이에서 USB 웹캠 폴백 시 인덱스 0을 기본으로 사용
+                # (라즈베리파이에서는 USB 웹캠이 보통 인덱스 0)
+                fallback_index = 0 if self.index != 0 else self.index
+                self._init_usb_cam_with_index(fallback_index)
         else:
             self._init_usb_cam()
 
-    def _init_usb_cam(self):
-        print("[Camera] Using USB webcam.")
+    def _init_usb_cam(self, index=None):
+        """USB 웹캠 초기화 (기본값: self.index 사용)"""
+        if index is None:
+            index = self.index
+        self._init_usb_cam_with_index(index)
+    
+    def _init_usb_cam_with_index(self, index):
+        """지정된 인덱스로 USB 웹캠 초기화"""
+        print(f"[Camera] Using USB webcam (index: {index}).")
         try:
-            self.cap = cv2.VideoCapture(self.index)
+            self.cap = cv2.VideoCapture(index)
             if not self.cap.isOpened():
-                raise RuntimeError("Webcam not available")
+                raise RuntimeError(f"Webcam not available at index {index}")
 
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_WIDTH)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
-            print("[Camera] USB webcam initialized.")
+            print(f"[Camera] USB webcam initialized at index {index}.")
         except Exception as e:
             ErrorHandler.handle_camera_error(
                 error=e,

@@ -15,6 +15,7 @@ LOG_FILE = "driving_events.log"
 
 CAM_WIDTH = 800
 CAM_HEIGHT = 480
+CAMERA_INDEX = 2  # 0: 기본 내장 카메라, 1+: USB 웹캠 (리눅스에서 lsusb 또는 v4l2-ctl --list-devices로 확인)
 
 # Report system settings
 REPORT_IMPACT_MONITORING_DURATION = 60.0  # Monitor for 1 minute after last impact
