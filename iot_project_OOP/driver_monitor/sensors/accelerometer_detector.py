@@ -26,7 +26,7 @@ class AccelerometerDetector:
         self.alert_start_time = None
         self.last_event_time = datetime.datetime.now()
         self.last_event_text = ""
-        self.last_valid_data = None  # 마지막으로 읽은 유효한 값 (읽기 실패 시 사용)
+        self.last_valid_data = None  # Last valid value read (used when read fails)
 
     def initialize(self):
         if not IS_RPI:
@@ -58,16 +58,16 @@ class AccelerometerDetector:
     
     def read_accel(self):
         if self.accel is None:
-            # 센서가 없으면 이전 값 반환 (있는 경우)
+            # Return previous value if sensor is not available (if available)
             return self.last_valid_data, None
 
         try:
             x, y, z = self.accel.acceleration
             data = (x, y, z)
-            self.last_valid_data = data  # 유효한 값 저장
+            self.last_valid_data = data  # Store valid value
             return data, self._detect_event(x)
         except Exception as e:
-            # 읽기 실패 시 이전 값 반환 (일시적 오류 대응)
+            # Return previous value on read failure (temporary error handling)
             print(f"[Accel] Read failed: {e}, using last valid data")
             return self.last_valid_data, None
 

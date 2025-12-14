@@ -7,14 +7,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.util.Duration;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Full-screen modal for response request when accident is detected
@@ -80,7 +72,8 @@ public class ResponseRequestModal extends StackPane {
         
         // Make modal box clickable
         modalBox.setOnMouseClicked(e -> {
-            writeUserResponse();
+            // Use API first, fallback to file
+            ApiDataLoader.postUserResponse();
             if (onResponse != null) {
                 onResponse.run();
             }
@@ -135,37 +128,6 @@ public class ResponseRequestModal extends StackPane {
         }
     }
     
-    private void writeUserResponse() {
-        // Try multiple paths (Raspberry Pi and development)
-        String[] paths = {
-            "/home/pi/iot/data/user_response.json",
-            System.getProperty("user.dir") + "/../data/user_response.json",
-            System.getProperty("user.dir") + "/data/user_response.json",
-            "data/user_response.json"
-        };
-        
-        for (String path : paths) {
-            try {
-                // Create parent directory if it doesn't exist
-                Files.createDirectories(Paths.get(path).getParent());
-                
-                // Write response JSON
-                ObjectMapper mapper = new ObjectMapper();
-                ObjectNode response = mapper.createObjectNode();
-                response.put("responded", true);
-                response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                
-                try (FileWriter writer = new FileWriter(path)) {
-                    writer.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response));
-                }
-                
-                System.out.println("[ResponseRequestModal] User response written to: " + path);
-                break; // Success, exit loop
-            } catch (IOException e) {
-                // Try next path
-                continue;
-            }
-        }
-    }
+    // Removed writeUserResponse() - now using ApiDataLoader.postUserResponse()
 }
 

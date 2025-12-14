@@ -80,7 +80,7 @@ class DriverMonitor:
             raise
 
         self.running = True
-        self.last_accel_data = None  # 이전 가속도 값 유지 (UI 업데이트용)
+        self.last_accel_data = None  # Maintain previous accelerometer value (for UI update)
 
     def initialize(self):
         """Initialize all components."""
@@ -171,8 +171,8 @@ class DriverMonitor:
             show_speaker_popup = state_info['show_speaker_popup']
             no_face_duration = state_info['no_face_duration']
             
-            # Check for UI request to stop speaker
-            stop_speaker_request = self._check_stop_speaker_request()
+            # Check for UI request to stop speaker (API or file-based)
+            stop_speaker_request = self.data_bridge.check_stop_speaker() or self._check_stop_speaker_request()
             if stop_speaker_request:
                 was_active = self.drowsiness_state.handle_stop_speaker_request()
                 if was_active:
@@ -212,16 +212,16 @@ class DriverMonitor:
             if self.accel.is_available():
                 new_accel_data, event = self.accel.read_accel()
                 
-                # 가속도 센서 읽기 성공 시 값 저장, 실패 시 이전 값 사용
+                # Store value on successful accelerometer read, use previous value on failure
                 if new_accel_data is not None:
                     accel_data = new_accel_data
-                    self.last_accel_data = new_accel_data  # 성공한 값 저장
+                    self.last_accel_data = new_accel_data  # Store successful value
                 else:
-                    # 읽기 실패 시 이전 값 사용 (UI 업데이트 유지)
+                    # Use previous value on read failure (maintain UI update)
                     accel_data = self.last_accel_data
                     if accel_data is None:
-                        # 처음이거나 이전 값이 없으면 기본값 (정지 상태)
-                        accel_data = (0.0, 0.0, 9.8)  # 중력만 (정지 상태)
+                        # Default value if first read or no previous value (stationary state)
+                        accel_data = (0.0, 0.0, 9.8)  # Gravity only (stationary state)
 
                 if event:
                     self.logger.log(event)
@@ -239,10 +239,10 @@ class DriverMonitor:
                         # Same impact already registered, skip
                         pass
             else:
-                # 가속도 센서가 사용 불가능해도 이전 값 유지 (UI 업데이트 계속)
+                # Maintain previous value even if accelerometer is unavailable (continue UI update)
                 accel_data = self.last_accel_data
                 if accel_data is None:
-                    accel_data = (0.0, 0.0, 9.8)  # 기본값
+                    accel_data = (0.0, 0.0, 9.8)  # Default value
 
             # =========================================
             # 5.5) GPS position extraction (reuse data read above)
@@ -255,8 +255,12 @@ class DriverMonitor:
             # =========================================
             # 5.6) Report system check (before keyboard input)
             # =========================================
-            # Check for UI response (touch screen)
-            ui_response = self._check_ui_response()
+            # Check for UI response (touch screen) - API or file-based
+            ui_response = None
+            if self.data_bridge.check_user_response():
+                ui_response = "UI_RESPONSE"
+            else:
+                ui_response = self._check_ui_response()
             
             # Update report manager (initial check without keyboard input)
             # Pass EAR and threshold for eyes closed detection
@@ -318,9 +322,14 @@ class DriverMonitor:
             key = self.frame_processor.display_frame(frame)
 
             # Handle UI response and keyboard input for report system
-            # Check UI response first (touch screen), then keyboard
+            # Check UI response first (touch screen) - API or file-based, then keyboard
             # Only process response if status is ALERT (not REPORTING - report already sent)
-            ui_response = self._check_ui_response()
+            ui_response = None
+            if self.data_bridge.check_user_response():
+                ui_response = "UI_RESPONSE"
+            else:
+                ui_response = self._check_ui_response()
+            
             if ui_response is not None:
                 if report_status['status'] == 'ALERT':
                     # Get current threshold from config (supports runtime updates)

@@ -29,9 +29,9 @@ class CameraManager:
         self.picam2 = None
         self.cap = None
         self.reconnect_attempts = 0
-        self.max_reconnect_attempts = 5  # 최대 재연결 시도 횟수
+        self.max_reconnect_attempts = 5  # Maximum reconnection attempts
         self.connection_check_counter = 0
-        self.connection_check_interval = 30  # 30프레임마다 체크 (약 1초, 30fps 기준)
+        self.connection_check_interval = 30  # Check every 30 frames (approximately 1 second at 30fps)
 
     def initialize(self):
         """
@@ -82,16 +82,16 @@ class CameraManager:
             raise RuntimeError("USB webcam initialization failed and CSI camera is not available (not on Raspberry Pi).")
 
     def _init_usb_cam(self, index=None):
-        """USB 웹캠 초기화 (기본값: self.index 사용)"""
+        """Initialize USB webcam (default: use self.index)"""
         if index is None:
             index = self.index
         self._init_usb_cam_with_index(index)
     
     def _init_usb_cam_with_index(self, index):
-        """지정된 인덱스로 USB 웹캠 초기화"""
+        """Initialize USB webcam with specified index"""
         print(f"[Camera] Using USB webcam (index: {index}).")
         try:
-            # 기존 연결이 있으면 해제
+            # Release existing connection if present
             if self.cap is not None:
                 try:
                     self.cap.release()
@@ -106,7 +106,7 @@ class CameraManager:
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_WIDTH)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
             print(f"[Camera] USB webcam initialized at index {index}.")
-            self.reconnect_attempts = 0  # 재연결 성공 시 카운터 리셋
+            self.reconnect_attempts = 0  # Reset counter on successful reconnection
         except Exception as e:
             ErrorHandler.handle_camera_error(
                 error=e,
@@ -117,10 +117,10 @@ class CameraManager:
     
     def _reconnect_usb_cam(self):
         """
-        USB 웹캠 재연결 시도
+        Attempt to reconnect USB webcam
         
         Returns:
-            bool: 재연결 성공 여부
+            bool: Whether reconnection succeeded
         """
         if self.reconnect_attempts >= self.max_reconnect_attempts:
             print(f"[Camera] Maximum reconnection attempts ({self.max_reconnect_attempts}) reached.")
@@ -130,7 +130,7 @@ class CameraManager:
         print(f"[Camera] Attempting to reconnect USB webcam (attempt {self.reconnect_attempts}/{self.max_reconnect_attempts})...")
         
         try:
-            # 기존 연결 해제
+            # Release existing connection
             if self.cap is not None:
                 try:
                     self.cap.release()
@@ -138,11 +138,11 @@ class CameraManager:
                     pass
                 self.cap = None
             
-            # 잠시 대기 (USB 버스 안정화)
+            # Wait briefly (USB bus stabilization)
             import time
             time.sleep(0.5)
             
-            # 재연결 시도
+            # Attempt reconnection
             self._init_usb_cam()
             print(f"[Camera] USB webcam reconnected successfully.")
             return True
@@ -162,13 +162,13 @@ class CameraManager:
             RuntimeError: If camera is unavailable and reconnection fails
         """
         if IS_RPI and self.picam2:
-            # CSI 카메라는 재연결 불필요 (하드웨어 연결)
+            # CSI camera does not need reconnection (hardware connection)
             frame = self.picam2.capture_array()
             frame_rgb = self.picam2.capture_array()
             return frame, frame_rgb
 
         else:
-            # 주기적으로 연결 상태 체크 (프레임 읽기 전)
+            # Periodically check connection status (before frame read)
             self.connection_check_counter += 1
             if self.connection_check_counter >= self.connection_check_interval:
                 self.connection_check_counter = 0
@@ -177,21 +177,21 @@ class CameraManager:
                     if not self._reconnect_usb_cam():
                         print("[Camera] Reconnection failed during periodic check.")
             
-            # USB 웹캠 연결 상태 확인
+            # Check USB webcam connection status
             if self.cap is None or not self.cap.isOpened():
                 print("[Camera] USB camera not available. Attempting to reconnect...")
                 if not self._reconnect_usb_cam():
                     raise RuntimeError("USB camera unavailable and reconnection failed")
             
-            # 프레임 읽기 시도
+            # Attempt to read frame
             ret, frame = self.cap.read()
             if not ret:
-                # 프레임 읽기 실패 - 재연결 시도
+                # Frame read failed - attempt reconnection
                 print("[Camera] Frame read failed. Attempting to reconnect...")
                 if not self._reconnect_usb_cam():
                     raise RuntimeError("Could not read frame and reconnection failed")
                 
-                # 재연결 후 다시 시도
+                # Retry after reconnection
                 ret, frame = self.cap.read()
                 if not ret:
                     raise RuntimeError("Could not read frame after reconnection")

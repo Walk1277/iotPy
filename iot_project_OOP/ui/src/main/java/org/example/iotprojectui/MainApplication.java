@@ -38,8 +38,8 @@ public class MainApplication extends Application {
         primaryStage.setResizable(false);
         primaryStage.show();
         
-        // Start updating data from Python backend every second
-        Timeline updateTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+        // Start updating data from Python backend (faster update with API - 100ms)
+        Timeline updateTimeline = new Timeline(new KeyFrame(Duration.millis(100), e -> {
             dataUpdater.updateFromBackend();
         }));
         updateTimeline.setCycleCount(Timeline.INDEFINITE);

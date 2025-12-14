@@ -1,7 +1,7 @@
 # data_bridge.py
 """
 Data bridge module for UI communication.
-Creates JSON files that the JavaFX UI can read to display real-time status.
+Uses HTTP REST API (Flask) for real-time communication, with file-based fallback.
 """
 import json
 import datetime
@@ -21,23 +21,44 @@ try:
     from ..config.config_manager import ConfigManager
     from ..utils.path_manager import PathManager
     from ..utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
+    from ..api.api_server import APIServer
 except ImportError:
     from driver_monitor.config.config_manager import ConfigManager
     from driver_monitor.utils.path_manager import PathManager
     from driver_monitor.utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
+    try:
+        from driver_monitor.api.api_server import APIServer
+    except ImportError:
+        APIServer = None
 
 
 class DataBridge:
     """
     Bridge between Python backend and JavaFX UI.
-    Writes real-time status data to JSON files that the UI can read.
+    Uses HTTP REST API for real-time communication (primary), with file-based fallback.
     """
     
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None, use_api=True):
         """
         Args:
             data_dir: Directory to store JSON files (optional, uses PathManager if None)
+            use_api: Whether to use HTTP REST API (default: True, falls back to files if API unavailable)
         """
+        self.use_api = use_api and APIServer is not None
+        self.api_server = None
+        
+        # Initialize API server if available
+        if self.use_api:
+            try:
+                self.api_server = APIServer(port=5000)
+                self.api_server.start()
+                print("[DataBridge] Using HTTP REST API for communication")
+            except Exception as e:
+                print(f"[DataBridge] Failed to start API server: {e}")
+                print("[DataBridge] Falling back to file-based communication")
+                self.use_api = False
+        
+        # File-based fallback setup
         if data_dir is None:
             data_dir = PathManager.ensure_data_dir()
         else:
@@ -48,7 +69,20 @@ class DataBridge:
         self.status_json_path = PathManager.get_status_json_path()
         self.log_summary_json_path = PathManager.get_log_summary_json_path()
         
-        print(f"[DataBridge] Using data directory: {data_dir}")
+        if not self.use_api:
+            print(f"[DataBridge] Using file-based communication (data directory: {data_dir})")
+    
+    def check_user_response(self):
+        """Check if user responded via UI (API mode only)."""
+        if self.use_api and self.api_server:
+            return self.api_server.check_user_response()
+        return False
+    
+    def check_stop_speaker(self):
+        """Check if stop speaker was requested (API mode only)."""
+        if self.use_api and self.api_server:
+            return self.api_server.check_stop_speaker()
+        return False
     
     def update_drowsiness_status(self, ear=None, face_detected=False, alarm_on=False, state=None, alarm_duration=0.0, show_speaker_popup=False):
         """
@@ -85,7 +119,10 @@ class DataBridge:
             "show_speaker_popup": show_speaker_popup
         }
         
-        self._write_json(self.drowsiness_json_path, data)
+        if self.use_api and self.api_server:
+            self.api_server.update_drowsiness(data)
+        else:
+            self._write_json(self.drowsiness_json_path, data)
     
     def update_system_status(self, 
                             accel_data=None, 
@@ -146,7 +183,10 @@ class DataBridge:
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        self._write_json(self.status_json_path, data)
+        if self.use_api and self.api_server:
+            self.api_server.update_status(data)
+        else:
+            self._write_json(self.status_json_path, data)
     
     def update_log_summary(self):
         """
@@ -232,7 +272,10 @@ class DataBridge:
                     }
                 }
             
-            self._write_json(self.log_summary_json_path, summary)
+            if self.use_api and self.api_server:
+                self.api_server.update_log_summary(summary)
+            else:
+                self._write_json(self.log_summary_json_path, summary)
             
         except Exception as e:
             ErrorHandler.handle_file_error(

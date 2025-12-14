@@ -14,7 +14,8 @@ public class DataUpdater {
     }
     
     public void updateFromBackend() {
-        JsonNode statusJson = StatusDataLoader.load();
+        // Use API first, fallback to file-based
+        JsonNode statusJson = ApiDataLoader.loadStatus();
         if (statusJson != null) {
             Platform.runLater(() -> {
                 try {
@@ -29,17 +30,8 @@ public class DataUpdater {
     }
     
     private void updateCurrentStatus() {
-        JsonNode drowsinessJson = null;
-        String[] paths = {
-            "/home/pi/iot/data/drowsiness.json",
-            System.getProperty("user.dir") + "/../data/drowsiness.json",
-            System.getProperty("user.dir") + "/data/drowsiness.json",
-            "data/drowsiness.json"
-        };
-        for (String path : paths) {
-            drowsinessJson = JsonDataLoader.load(path);
-            if (drowsinessJson != null) break;
-        }
+        // Use API first, fallback to file-based
+        JsonNode drowsinessJson = ApiDataLoader.loadDrowsiness();
         
         if (drowsinessJson != null) {
             String state = drowsinessJson.has("state") ? drowsinessJson.get("state").asText() : "unknown";
@@ -70,17 +62,8 @@ public class DataUpdater {
     }
     
     private void updateDrivingScore() {
-        JsonNode logSummary = null;
-        String[] paths = {
-            "/home/pi/iot/data/log_summary.json",
-            System.getProperty("user.dir") + "/../data/log_summary.json",
-            System.getProperty("user.dir") + "/data/log_summary.json",
-            "data/log_summary.json"
-        };
-        for (String path : paths) {
-            logSummary = JsonDataLoader.load(path);
-            if (logSummary != null) break;
-        }
+        // Use API first, fallback to file-based
+        JsonNode logSummary = ApiDataLoader.loadLogSummary();
         
         if (logSummary != null && logSummary.has("monthly_score")) {
             int score = logSummary.get("monthly_score").asInt();

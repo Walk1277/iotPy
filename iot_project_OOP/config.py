@@ -15,9 +15,9 @@ LOG_FILE = "driving_events.log"
 
 CAM_WIDTH = 800
 CAM_HEIGHT = 480
-CAMERA_INDEX = 0  # 0: 기본 내장 카메라, 1+: USB 웹캠 (리눅스에서 lsusb 또는 v4l2-ctl --list-devices로 확인)
-# 카메라 우선순위: USB 웹캠 우선 사용, 없으면 CSI 카메라(PiCamera2) 자동 사용 (라즈베리파이만)
-# USE_PICAMERA2 설정은 더 이상 사용되지 않음 (자동 감지)
+CAMERA_INDEX = 0  # 0: Default built-in camera, 1+: USB webcam (check with lsusb or v4l2-ctl --list-devices on Linux)
+# Camera priority: USB webcam first, then CSI camera (PiCamera2) automatically if not available (Raspberry Pi only)
+# USE_PICAMERA2 setting is no longer used (auto-detection)
 
 # Report system settings
 REPORT_IMPACT_MONITORING_DURATION = 60.0  # Monitor for 1 minute after last impact

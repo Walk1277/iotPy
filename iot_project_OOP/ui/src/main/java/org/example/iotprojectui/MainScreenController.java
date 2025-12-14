@@ -320,7 +320,8 @@ public class MainScreenController {
             
             // Handle user response
             responseAlert.setOnCloseRequest(e -> {
-                writeUserResponse();
+                // Use API first, fallback to file
+                ApiDataLoader.postUserResponse();
                 stopResponseCountdown();
                 responseAlertShown = false;
                 responseAlert = null;
@@ -331,7 +332,8 @@ public class MainScreenController {
             javafx.scene.Node okButton = responseAlert.getDialogPane().lookupButton(ButtonType.OK);
             if (okButton instanceof Button) {
                 ((Button) okButton).setOnAction(e -> {
-                    writeUserResponse();
+                    // Use API first, fallback to file
+                    ApiDataLoader.postUserResponse();
                     stopResponseCountdown();
                     responseAlert.close();
                     responseAlertShown = false;
@@ -431,7 +433,8 @@ public class MainScreenController {
             alert.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.OK) {
                     // Write stop request to file
-                    writeStopSpeakerRequest();
+                    // Use API first, fallback to file
+                    ApiDataLoader.postStopSpeaker();
                     speakerAlertShown = false;
                 }
             });
@@ -459,64 +462,8 @@ public class MainScreenController {
         });
     }
     
-    private void writeUserResponse() {
-        // Try multiple paths (Raspberry Pi and development)
-        String[] paths = {
-            "/home/pi/iot/data/user_response.json",
-            System.getProperty("user.dir") + "/../data/user_response.json",
-            System.getProperty("user.dir") + "/data/user_response.json",
-            "data/user_response.json"
-        };
-        
-        for (String path : paths) {
-            try {
-                java.nio.file.Files.createDirectories(java.nio.file.Paths.get(path).getParent());
-                
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                com.fasterxml.jackson.databind.node.ObjectNode response = mapper.createObjectNode();
-                response.put("responded", true);
-                response.put("timestamp", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                
-                try (java.io.FileWriter writer = new java.io.FileWriter(path)) {
-                    writer.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response));
-                }
-                
-                break; // Success, exit loop
-            } catch (Exception e) {
-                // Try next path
-                continue;
-            }
-        }
-    }
+    // Removed writeUserResponse() - now using ApiDataLoader.postUserResponse()
     
-    private void writeStopSpeakerRequest() {
-        // Try multiple paths (Raspberry Pi and development)
-        String[] paths = {
-            "/home/pi/iot/data/stop_speaker.json",
-            System.getProperty("user.dir") + "/../data/stop_speaker.json",
-            System.getProperty("user.dir") + "/data/stop_speaker.json",
-            "data/stop_speaker.json"
-        };
-        
-        for (String path : paths) {
-            try {
-                java.nio.file.Files.createDirectories(java.nio.file.Paths.get(path).getParent());
-                
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                com.fasterxml.jackson.databind.node.ObjectNode stopRequest = mapper.createObjectNode();
-                stopRequest.put("stop", true);
-                stopRequest.put("timestamp", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                
-                try (java.io.FileWriter writer = new java.io.FileWriter(path)) {
-                    writer.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(stopRequest));
-                }
-                
-                break; // Success, exit loop
-            } catch (Exception e) {
-                // Try next path
-                continue;
-            }
-        }
-    }
+    // Removed writeStopSpeakerRequest() - now using ApiDataLoader.postStopSpeaker()
 }
 

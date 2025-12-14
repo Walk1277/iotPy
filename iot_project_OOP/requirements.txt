@@ -8,6 +8,8 @@ solapi>=1.0.0
 pyserial>=3.5
 pynmea2>=1.19.0
 requests>=2.31.0
+flask>=2.3.0
+flask-cors>=4.0.0
 
 # Optional: Raspberry Pi specific packages (install separately if needed)
 # picamera2
