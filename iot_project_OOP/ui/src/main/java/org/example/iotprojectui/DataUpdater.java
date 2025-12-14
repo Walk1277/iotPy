@@ -14,8 +14,7 @@ public class DataUpdater {
     }
     
     public void updateFromBackend() {
-        // Use API first, fallback to file-based
-        JsonNode statusJson = ApiDataLoader.loadStatus();
+        JsonNode statusJson = StatusDataLoader.load();
         if (statusJson != null) {
             Platform.runLater(() -> {
                 try {
@@ -30,8 +29,17 @@ public class DataUpdater {
     }
     
     private void updateCurrentStatus() {
-        // Use API first, fallback to file-based
-        JsonNode drowsinessJson = ApiDataLoader.loadDrowsiness();
+        JsonNode drowsinessJson = null;
+        String[] paths = {
+            "/home/pi/iot/data/drowsiness.json",
+            System.getProperty("user.dir") + "/../data/drowsiness.json",
+            System.getProperty("user.dir") + "/data/drowsiness.json",
+            "data/drowsiness.json"
+        };
+        for (String path : paths) {
+            drowsinessJson = JsonDataLoader.load(path);
+            if (drowsinessJson != null) break;
+        }
         
         if (drowsinessJson != null) {
             String state = drowsinessJson.has("state") ? drowsinessJson.get("state").asText() : "unknown";
@@ -62,8 +70,17 @@ public class DataUpdater {
     }
     
     private void updateDrivingScore() {
-        // Use API first, fallback to file-based
-        JsonNode logSummary = ApiDataLoader.loadLogSummary();
+        JsonNode logSummary = null;
+        String[] paths = {
+            "/home/pi/iot/data/log_summary.json",
+            System.getProperty("user.dir") + "/../data/log_summary.json",
+            System.getProperty("user.dir") + "/data/log_summary.json",
+            "data/log_summary.json"
+        };
+        for (String path : paths) {
+            logSummary = JsonDataLoader.load(path);
+            if (logSummary != null) break;
+        }
         
         if (logSummary != null && logSummary.has("monthly_score")) {
             int score = logSummary.get("monthly_score").asInt();
@@ -80,20 +97,25 @@ public class DataUpdater {
         // Check for response request
         boolean responseRequested = statusJson.has("response_requested") && statusJson.get("response_requested").asBoolean();
         
+        // Debug: Print response request status
+        if (responseRequested) {
+            System.out.println("[DataUpdater] Response requested detected in status.json");
+        }
+        
         if (responseRequested) {
             // Show response request modal (higher priority - hide speaker alert if showing)
             String message = statusJson.has("response_message") ? statusJson.get("response_message").asText() : "Touch screen to cancel report";
             double remainingTime = statusJson.has("response_remaining_time") ? statusJson.get("response_remaining_time").asDouble() : 10.0;
             
+            System.out.println("[DataUpdater] Showing response modal - message: " + message + ", remaining: " + remainingTime);
             // Hide speaker alert if it's showing (accident response has higher priority)
             mainScreenController.hideSpeakerAlertIfShowing();
             mainScreenController.updateResponseRequestModal(message, remainingTime);
             mainScreenController.updateAccidentStatus("Response Required!", "#ff5722");
         } else {
-            // Don't hide modal - let user close it manually
-            // The alert will stay open until user clicks OK
-            // Even if response_requested becomes false, keep the alert open for user interaction
-            
+            // Don't force close the alert - let user respond
+            // The alert will close when user clicks a button (like speaker popup)
+            // Just update the status label
             if (impactDetected) {
                 mainScreenController.updateAccidentStatus("Accident Detected!", "#d32f2f");
             } else {
