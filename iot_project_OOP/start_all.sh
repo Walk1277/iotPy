@@ -14,7 +14,7 @@ echo ""
 # ==========================================
 # System Check and USB Power Management
 # ==========================================
-echo "[1/4] Checking system status..."
+echo "[1/5] Checking system status..."
 
 # Check USB power management
 if [ ! -f "/etc/udev/rules.d/50-usb_power.rules" ]; then
@@ -44,7 +44,7 @@ fi
 
 # Check USB devices
 echo ""
-echo "[2/4] Checking USB devices..."
+echo "[2/5] Checking USB devices..."
 if command -v lsusb &> /dev/null; then
     USB_COUNT=$(lsusb | wc -l)
     echo "   Found $USB_COUNT USB device(s)"
@@ -57,7 +57,7 @@ fi
 
 # Check camera availability
 echo ""
-echo "[3/4] Checking camera availability..."
+echo "[3/5] Checking camera availability..."
 if command -v v4l2-ctl &> /dev/null; then
     CAMERA_COUNT=$(v4l2-ctl --list-devices 2>/dev/null | grep -c "/dev/video" || echo "0")
     if [ "$CAMERA_COUNT" -gt 0 ]; then
@@ -70,7 +70,54 @@ else
 fi
 
 echo ""
-echo "[4/4] Starting services..."
+echo "[4/5] Checking dependencies and ports..."
+echo ""
+
+# Check Flask installation
+if python3 -c "import flask" 2>/dev/null; then
+    echo "   ✅ Flask is installed"
+else
+    echo "   ⚠️  Flask is not installed"
+    echo "   Installing Flask..."
+    pip3 install flask flask-cors > /dev/null 2>&1
+    if python3 -c "import flask" 2>/dev/null; then
+        echo "   ✅ Flask installed successfully"
+    else
+        echo "   ❌ Failed to install Flask. Please run: pip3 install flask flask-cors"
+        echo "   System will fallback to file-based communication"
+    fi
+fi
+
+# Check if port 5000 is already in use
+if command -v lsof &> /dev/null; then
+    if lsof -i :5000 > /dev/null 2>&1; then
+        echo "   ⚠️  Port 5000 is already in use"
+        read -p "   Kill process using port 5000? (y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            PID=$(lsof -t -i :5000)
+            if [ -n "$PID" ]; then
+                echo "   Killing process $PID..."
+                kill $PID 2>/dev/null
+                sleep 1
+                if lsof -i :5000 > /dev/null 2>&1; then
+                    kill -9 $PID 2>/dev/null
+                fi
+            fi
+        fi
+    else
+        echo "   ✅ Port 5000 is available"
+    fi
+elif command -v netstat &> /dev/null; then
+    if netstat -tuln 2>/dev/null | grep -q ":5000 "; then
+        echo "   ⚠️  Port 5000 is already in use"
+    else
+        echo "   ✅ Port 5000 is available"
+    fi
+fi
+
+echo ""
+echo "[5/5] Starting services..."
 echo ""
 
 # Check if Python backend is already running

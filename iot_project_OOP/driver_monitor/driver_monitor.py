@@ -80,7 +80,7 @@ class DriverMonitor:
             raise
 
         self.running = True
-        self.last_accel_data = None  # Maintain previous accelerometer value (for UI update)
+        self.last_accel_data = (0.0, 0.0, 9.8)  # Initialize with default value (gravity only, stationary state)
 
     def initialize(self):
         """Initialize all components."""
@@ -109,6 +109,25 @@ class DriverMonitor:
         # Accelerometer event display text
         accel_event_text = ""
         accel_event_time = datetime.datetime.now()
+
+        # Initialize UI with default sensor data
+        print("Initializing UI with default sensor data...")
+        self.data_bridge.update_drowsiness_status(
+            ear=None,
+            face_detected=False,
+            alarm_on=False,
+            state="no_face",
+            alarm_duration=0.0,
+            show_speaker_popup=False
+        )
+        self.data_bridge.update_system_status(
+            accel_data=self.last_accel_data,
+            impact_detected=False,
+            report_status=None,
+            gps_position=None,
+            connection_status="Initializing...",
+            sensor_status="Camera: Waiting / Accelerometer: Waiting / GPS: Waiting"
+        )
 
         print("Press 'q' to quit. UI is available for monitoring.")
 

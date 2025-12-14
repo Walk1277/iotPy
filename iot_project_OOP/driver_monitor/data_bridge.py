@@ -51,12 +51,17 @@ class DataBridge:
         if self.use_api:
             try:
                 self.api_server = APIServer(port=5000)
-                self.api_server.start()
-                print("[DataBridge] Using HTTP REST API for communication")
+                self.api_server.start(wait_for_ready=True, max_wait_time=5.0)
+                # Verify server is actually ready
+                if self.api_server.is_ready():
+                    print("[DataBridge] Using HTTP REST API for communication")
+                else:
+                    print("[DataBridge] API server started but may not be ready yet")
             except Exception as e:
                 print(f"[DataBridge] Failed to start API server: {e}")
                 print("[DataBridge] Falling back to file-based communication")
                 self.use_api = False
+                self.api_server = None
         
         # File-based fallback setup
         if data_dir is None:
@@ -69,19 +74,51 @@ class DataBridge:
         self.status_json_path = PathManager.get_status_json_path()
         self.log_summary_json_path = PathManager.get_log_summary_json_path()
         
+        # File paths for UI responses (for file-based fallback)
+        self.user_response_json_path = PathManager.get_user_response_json_path()
+        self.stop_speaker_json_path = PathManager.get_stop_speaker_json_path()
+        
         if not self.use_api:
             print(f"[DataBridge] Using file-based communication (data directory: {data_dir})")
     
     def check_user_response(self):
-        """Check if user responded via UI (API mode only)."""
+        """Check if user responded via UI (API or file-based)."""
         if self.use_api and self.api_server:
             return self.api_server.check_user_response()
-        return False
+        else:
+            # File-based fallback
+            return self._check_file_response(self.user_response_json_path, "responded")
     
     def check_stop_speaker(self):
-        """Check if stop speaker was requested (API mode only)."""
+        """Check if stop speaker was requested (API or file-based)."""
         if self.use_api and self.api_server:
             return self.api_server.check_stop_speaker()
+        else:
+            # File-based fallback
+            return self._check_file_response(self.stop_speaker_json_path, "stop")
+    
+    def _check_file_response(self, filepath, key):
+        """Check for file-based UI responses."""
+        paths = [
+            filepath,
+            os.path.join(project_root, "data", os.path.basename(filepath)),
+            os.path.join(self.data_dir, os.path.basename(filepath))
+        ]
+        
+        for path in paths:
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        response_data = json.load(f)
+                        if response_data.get(key, False):
+                            # Delete the response file after reading
+                            try:
+                                os.remove(path)
+                            except (OSError, PermissionError):
+                                pass
+                            return True
+                except Exception as e:
+                    continue
         return False
     
     def update_drowsiness_status(self, ear=None, face_detected=False, alarm_on=False, state=None, alarm_duration=0.0, show_speaker_popup=False):

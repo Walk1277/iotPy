@@ -6,6 +6,7 @@ Replaces file-based communication to eliminate I/O blocking issues.
 import threading
 import sys
 import os
+import time
 
 # Add project root to Python path (Raspberry Pi compatibility)
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,6 +38,8 @@ class APIServer:
         self.port = port
         self.server_thread = None
         self.running = False
+        self.server_ready = False  # Flag to indicate server is ready
+        self.server_ready_lock = threading.Lock()
         
         # Shared data (thread-safe with lock)
         self.drowsiness_data = {}
@@ -91,24 +94,53 @@ class APIServer:
             """Health check endpoint."""
             return jsonify({"status": "ok", "service": "IoT Driver Monitor API"})
     
-    def start(self):
-        """Start Flask server in background thread."""
+    def start(self, wait_for_ready=True, max_wait_time=5.0):
+        """
+        Start Flask server in background thread.
+        
+        Args:
+            wait_for_ready: If True, wait for server to be ready before returning
+            max_wait_time: Maximum time to wait for server to be ready (seconds)
+        """
         if self.running:
             return
         
         self.running = True
+        self.server_ready = False
         self.server_thread = threading.Thread(
             target=self._run_server,
             daemon=True,
             name="APIServer"
         )
         self.server_thread.start()
-        print(f"[API] Server started on http://localhost:{self.port}")
-        print(f"[API] Endpoints: /api/drowsiness, /api/status, /api/log_summary")
+        print(f"[API] Starting server on http://localhost:{self.port}...")
+        
+        # Wait for server to be ready
+        if wait_for_ready:
+            start_time = time.time()
+            while not self.server_ready and (time.time() - start_time) < max_wait_time:
+                time.sleep(0.1)
+            
+            if self.server_ready:
+                print(f"[API] Server ready on http://localhost:{self.port}")
+                print(f"[API] Endpoints: /api/drowsiness, /api/status, /api/log_summary")
+            else:
+                print(f"[API] Warning: Server may not be ready yet (waited {max_wait_time}s)")
+        else:
+            print(f"[API] Server starting in background (endpoints: /api/drowsiness, /api/status, /api/log_summary)")
     
     def _run_server(self):
         """Run Flask server (called in background thread)."""
         try:
+            # Mark server as ready after a short delay (allows Flask to initialize)
+            def mark_ready():
+                time.sleep(0.5)  # Give Flask time to start
+                with self.server_ready_lock:
+                    self.server_ready = True
+            
+            ready_thread = threading.Thread(target=mark_ready, daemon=True)
+            ready_thread.start()
+            
             self.app.run(
                 host='0.0.0.0',  # Allow access from localhost
                 port=self.port,
@@ -119,6 +151,13 @@ class APIServer:
         except Exception as e:
             print(f"[API] Server error: {e}")
             self.running = False
+            with self.server_ready_lock:
+                self.server_ready = False
+    
+    def is_ready(self):
+        """Check if server is ready to accept requests."""
+        with self.server_ready_lock:
+            return self.server_ready
     
     def stop(self):
         """Stop the API server."""
