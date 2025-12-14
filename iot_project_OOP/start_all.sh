@@ -11,6 +11,68 @@ echo "Starting IoT Driver Monitoring System"
 echo "=========================================="
 echo ""
 
+# ==========================================
+# System Check and USB Power Management
+# ==========================================
+echo "[1/4] Checking system status..."
+
+# Check USB power management
+if [ ! -f "/etc/udev/rules.d/50-usb_power.rules" ]; then
+    echo "⚠️  USB power management rule not found."
+    read -p "Apply USB power fix? (recommended for USB camera stability) (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [ -f "./fix_usb_power.sh" ]; then
+            echo "   Running USB power fix script..."
+            sudo ./fix_usb_power.sh
+        else
+            echo "   ⚠️  fix_usb_power.sh not found. Skipping USB power fix."
+        fi
+    fi
+fi
+
+# Check power status (Raspberry Pi only)
+if [ -f "/usr/bin/vcgencmd" ]; then
+    THROTTLED=$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2)
+    if [ "$THROTTLED" != "0x0" ]; then
+        echo "⚠️  Power issue detected (throttled: $THROTTLED)"
+        echo "   Consider using a better power supply (5V 3A+ recommended)"
+    else
+        echo "✅ Power status: OK"
+    fi
+fi
+
+# Check USB devices
+echo ""
+echo "[2/4] Checking USB devices..."
+if command -v lsusb &> /dev/null; then
+    USB_COUNT=$(lsusb | wc -l)
+    echo "   Found $USB_COUNT USB device(s)"
+    if [ $USB_COUNT -eq 0 ]; then
+        echo "   ⚠️  No USB devices detected"
+    fi
+else
+    echo "   ⚠️  lsusb not available"
+fi
+
+# Check camera availability
+echo ""
+echo "[3/4] Checking camera availability..."
+if command -v v4l2-ctl &> /dev/null; then
+    CAMERA_COUNT=$(v4l2-ctl --list-devices 2>/dev/null | grep -c "/dev/video" || echo "0")
+    if [ "$CAMERA_COUNT" -gt 0 ]; then
+        echo "   ✅ Found $CAMERA_COUNT camera device(s)"
+    else
+        echo "   ⚠️  No camera devices found"
+    fi
+else
+    echo "   ⚠️  v4l2-ctl not available (install: sudo apt install v4l-utils)"
+fi
+
+echo ""
+echo "[4/4] Starting services..."
+echo ""
+
 # Check if Python backend is already running
 if pgrep -f "main.py" > /dev/null; then
     echo "⚠️  Python backend is already running!"

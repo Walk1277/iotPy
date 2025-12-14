@@ -30,6 +30,8 @@ class CameraManager:
         self.cap = None
         self.reconnect_attempts = 0
         self.max_reconnect_attempts = 5  # 최대 재연결 시도 횟수
+        self.connection_check_counter = 0
+        self.connection_check_interval = 30  # 30프레임마다 체크 (약 1초, 30fps 기준)
 
     def initialize(self):
         """
@@ -166,6 +168,15 @@ class CameraManager:
             return frame, frame_rgb
 
         else:
+            # 주기적으로 연결 상태 체크 (프레임 읽기 전)
+            self.connection_check_counter += 1
+            if self.connection_check_counter >= self.connection_check_interval:
+                self.connection_check_counter = 0
+                if self.cap is None or not self.cap.isOpened():
+                    print("[Camera] Periodic check: USB camera disconnected. Reconnecting...")
+                    if not self._reconnect_usb_cam():
+                        print("[Camera] Reconnection failed during periodic check.")
+            
             # USB 웹캠 연결 상태 확인
             if self.cap is None or not self.cap.isOpened():
                 print("[Camera] USB camera not available. Attempting to reconnect...")

@@ -80,6 +80,7 @@ class DriverMonitor:
             raise
 
         self.running = True
+        self.last_accel_data = None  # 이전 가속도 값 유지 (UI 업데이트용)
 
     def initialize(self):
         """Initialize all components."""
@@ -209,7 +210,18 @@ class DriverMonitor:
             event = None
 
             if self.accel.is_available():
-                accel_data, event = self.accel.read_accel()
+                new_accel_data, event = self.accel.read_accel()
+                
+                # 가속도 센서 읽기 성공 시 값 저장, 실패 시 이전 값 사용
+                if new_accel_data is not None:
+                    accel_data = new_accel_data
+                    self.last_accel_data = new_accel_data  # 성공한 값 저장
+                else:
+                    # 읽기 실패 시 이전 값 사용 (UI 업데이트 유지)
+                    accel_data = self.last_accel_data
+                    if accel_data is None:
+                        # 처음이거나 이전 값이 없으면 기본값 (정지 상태)
+                        accel_data = (0.0, 0.0, 9.8)  # 중력만 (정지 상태)
 
                 if event:
                     self.logger.log(event)
@@ -226,6 +238,11 @@ class DriverMonitor:
                     elif impact_time == last_registered_impact_time:
                         # Same impact already registered, skip
                         pass
+            else:
+                # 가속도 센서가 사용 불가능해도 이전 값 유지 (UI 업데이트 계속)
+                accel_data = self.last_accel_data
+                if accel_data is None:
+                    accel_data = (0.0, 0.0, 9.8)  # 기본값
 
             # =========================================
             # 5.5) GPS position extraction (reuse data read above)
