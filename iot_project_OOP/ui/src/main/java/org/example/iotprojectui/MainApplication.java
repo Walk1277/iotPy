@@ -5,6 +5,7 @@ import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -20,6 +21,10 @@ public class MainApplication extends Application {
     public void start(Stage primaryStage) {
         BorderPane root = new BorderPane();
         
+        // Wrap BorderPane in StackPane for modal overlay support
+        StackPane rootStackPane = new StackPane();
+        rootStackPane.getChildren().add(root);
+        
         // Initialize controllers
         mainScreenController = new MainScreenController(root);
         dataUpdater = new DataUpdater(mainScreenController);
@@ -27,7 +32,7 @@ public class MainApplication extends Application {
         // Create and show main screen
         mainScreenController.showMainScreen();
         
-        Scene scene = new Scene(root, 800, 440);
+        Scene scene = new Scene(rootStackPane, 800, 440);
         primaryStage.setTitle("Smart Accident Prevention Kit");
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);

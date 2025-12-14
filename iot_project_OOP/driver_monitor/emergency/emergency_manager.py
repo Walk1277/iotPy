@@ -1,4 +1,12 @@
 # driver_monitor/emergency/emergency_manager.py
+"""
+Emergency Manager - DEPRECATED / UNUSED
+
+NOTE: This class is currently not used in the system.
+The emergency/accident detection is now handled by ReportManager.
+
+This file is kept for reference but may be removed in future versions.
+"""
 
 import datetime
 import sys

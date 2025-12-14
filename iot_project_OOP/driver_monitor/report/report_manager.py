@@ -23,6 +23,14 @@ from config import (
 )
 from driver_monitor.logging_system.event_logger import EventLogger
 
+# Try both relative and absolute imports for Raspberry Pi compatibility
+try:
+    from ..config.config_manager import ConfigManager
+    from ..utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
+except ImportError:
+    from driver_monitor.config.config_manager import ConfigManager
+    from driver_monitor.utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
+
 # Try to import SOLAPI for SMS functionality
 try:
     from solapi import SolapiMessageService
@@ -79,6 +87,7 @@ class ReportManager:
         self.alert_start_time = None
         self.user_responded = False
         self.sms_sent = False  # Track if SMS has been sent to avoid duplicates
+        self.report_sent = False  # Track if report has been sent (after timeout) - prevents response after timeout
 
     def register_impact(self, impact_time):
         """
@@ -91,6 +100,7 @@ class ReportManager:
         self.eyes_closed_start_time = None
         self.no_face_start_time = None
         self.sms_sent = False  # Reset SMS flag for new impact
+        self.report_sent = False  # Reset report sent flag for new impact
         print(f"[Report] ===== IMPACT REGISTERED =====")
         print(f"[Report] Impact registered at {impact_time.strftime('%H:%M:%S')}. Monitoring for {REPORT_IMPACT_MONITORING_DURATION}s.")
         print(f"[Report] Will check for: eyes closed >= {REPORT_EYES_CLOSED_DURATION}s OR no face >= {REPORT_NO_FACE_DURATION}s")
@@ -204,9 +214,8 @@ class ReportManager:
             return {'status': 'NORMAL', 'message': '', 'remaining_time': 0}
         
         # Check if auto report is enabled
-        import config
-        importlib.reload(config)
-        auto_report_enabled = getattr(config, 'AUTO_REPORT_ENABLED', True)
+        config_manager = ConfigManager()
+        auto_report_enabled = config_manager.get('AUTO_REPORT_ENABLED', True)
         
         if not auto_report_enabled:
             return {'status': 'NORMAL', 'message': '', 'remaining_time': 0}
@@ -244,6 +253,15 @@ class ReportManager:
         
         # In report mode - check for user response
         if self.report_mode:
+            # If report has already been sent (timeout passed), ignore any response
+            if self.report_sent:
+                # Report already sent, ignore response
+                return {
+                    'status': 'REPORTING',
+                    'message': 'Report already sent. Response ignored.',
+                    'remaining_time': 0
+                }
+            
             # Check keyboard input or UI response (current implementation)
             if keyboard_input is not None:
                 # Handle both keyboard input and UI response (UI_RESPONSE string)
@@ -253,6 +271,7 @@ class ReportManager:
                 self.no_face_start_time = None
                 self.alert_start_time = None
                 self.sms_sent = False  # Reset SMS flag
+                self.report_sent = False  # Reset report sent flag
                 self.logger.log("report_cancelled")
                 if keyboard_input == "UI_RESPONSE":
                     print("[Report] User responded via UI (touch screen). Report cancelled.")
@@ -290,6 +309,7 @@ class ReportManager:
                     self.eyes_closed_start_time = None
                     self.no_face_start_time = None
                     self.alert_start_time = None
+                    self.report_sent = True  # Mark that report has been sent
                     self.logger.log("report_triggered")
                     
                     # Send SMS report
@@ -312,16 +332,54 @@ class ReportManager:
         
         return {'status': 'NORMAL', 'message': '', 'remaining_time': 0}
 
+    def _get_location_with_fallback(self):
+        """
+        Get location with GPS priority, fallback to IP-based location.
+        
+        Returns:
+            dict: Location information with keys: type, lat, lon, accuracy, city (optional)
+        """
+        # 1. Try GPS first (highest accuracy)
+        if self.gps_manager:
+            gps_pos = self.gps_manager.get_position()
+            if gps_pos and gps_pos[0] != 0 and gps_pos[1] != 0:
+                return {
+                    'type': 'GPS',
+                    'lat': gps_pos[0],
+                    'lon': gps_pos[1],
+                    'accuracy': 'High'
+                }
+        
+        # 2. Fallback to IP-based location
+        try:
+            import requests
+            response = requests.get('http://ip-api.com/json/', timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('status') == 'success':
+                    return {
+                        'type': 'IP',
+                        'lat': data.get('lat', 0),
+                        'lon': data.get('lon', 0),
+                        'city': data.get('city', ''),
+                        'region': data.get('regionName', ''),
+                        'country': data.get('country', ''),
+                        'accuracy': 'Medium'
+                    }
+        except Exception as e:
+            print(f"[Report] IP-based location failed: {e}")
+        
+        return None
+
     def _send_sms_report(self):
         """
         Send SMS report when emergency conditions are met and no response received.
         """
-        # Reload config to get latest SMS settings
-        import config
-        importlib.reload(config)
-        current_sms_enabled = getattr(config, 'SMS_ENABLED', False)
-        current_from_number = getattr(config, 'SMS_FROM_NUMBER', '')
-        current_to_number = getattr(config, 'SMS_TO_NUMBER', '')
+        # Get latest SMS settings
+        config_manager = ConfigManager()
+        current_sms_enabled = config_manager.get('SMS_ENABLED', False)
+        current_from_number = config_manager.get('SMS_FROM_NUMBER', '')
+        current_to_number = config_manager.get('SMS_TO_NUMBER', '')
         
         if not current_sms_enabled or not self.sms_service:
             print("[Report] SMS reporting is disabled or service not available.")
@@ -336,14 +394,21 @@ class ReportManager:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             impact_time_str = self.last_impact_time.strftime("%H:%M:%S") if self.last_impact_time else "Unknown"
             
-            # Get GPS position if available
+            # Get location with GPS priority, IP fallback
+            location_info = self._get_location_with_fallback()
             gps_position_str = "Location unavailable"
-            if self.gps_manager:
-                gps_pos = self.gps_manager.get_position()
-                if gps_pos:
-                    gps_position_str = f"Latitude: {gps_pos[0]:.6f}, Longitude: {gps_pos[1]:.6f}"
-                    # Add Google Maps link
-                    gps_position_str += f"\nMap: https://maps.google.com/?q={gps_pos[0]},{gps_pos[1]}"
+            
+            if location_info:
+                if location_info['type'] == 'GPS':
+                    gps_position_str = f"Latitude: {location_info['lat']:.6f}, Longitude: {location_info['lon']:.6f} (GPS)"
+                    gps_position_str += f"\nMap: https://maps.google.com/?q={location_info['lat']},{location_info['lon']}"
+                elif location_info['type'] == 'IP':
+                    city_info = f", {location_info['city']}" if location_info.get('city') else ""
+                    region_info = f", {location_info['region']}" if location_info.get('region') else ""
+                    country_info = f", {location_info['country']}" if location_info.get('country') else ""
+                    location_detail = f"{city_info}{region_info}{country_info}".strip(', ')
+                    gps_position_str = f"Latitude: {location_info['lat']:.6f}, Longitude: {location_info['lon']:.6f} (IP-based{', ' + location_detail if location_detail else ''})"
+                    gps_position_str += f"\nMap: https://maps.google.com/?q={location_info['lat']},{location_info['lon']}"
             
             message_text = (
                 f"[EMERGENCY REPORT] Driver Monitoring System\n"
@@ -374,7 +439,11 @@ class ReportManager:
             self.logger.log("sms_report_sent")
             
         except Exception as e:
-            print(f"[Report] Failed to send SMS: {str(e)}")
+            ErrorHandler.handle_network_error(
+                error=e,
+                endpoint="SMS service",
+                logger=self.logger
+            )
             self.logger.log(f"sms_report_failed: {str(e)}")
 
     def reset(self):
@@ -386,4 +455,5 @@ class ReportManager:
         self.alert_start_time = None
         self.user_responded = False
         self.sms_sent = False  # Reset SMS sent flag
+        self.report_sent = False  # Reset report sent flag
 

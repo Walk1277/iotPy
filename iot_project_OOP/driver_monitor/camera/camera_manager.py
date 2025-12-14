@@ -17,6 +17,12 @@ except ImportError:
 
 from config import CAM_WIDTH, CAM_HEIGHT
 
+# Try both relative and absolute imports for Raspberry Pi compatibility
+try:
+    from ..utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
+except ImportError:
+    from driver_monitor.utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
+
 class CameraManager:
     def __init__(self, index=0):
         self.index = index
@@ -34,20 +40,33 @@ class CameraManager:
                 self.picam2.start()
                 print("[Camera] PiCamera2 initialized.")
             except Exception as e:
-                print(f"[Camera] PiCamera2 init failed: {e}")
+                ErrorHandler.handle_camera_error(
+                    error=e,
+                    context="PiCamera2 initialization",
+                    logger=None
+                )
+                print("[Camera] Falling back to USB webcam...")
                 self._init_usb_cam()
         else:
             self._init_usb_cam()
 
     def _init_usb_cam(self):
         print("[Camera] Using USB webcam.")
-        self.cap = cv2.VideoCapture(self.index)
-        if not self.cap.isOpened():
-            raise RuntimeError("Webcam not available")
+        try:
+            self.cap = cv2.VideoCapture(self.index)
+            if not self.cap.isOpened():
+                raise RuntimeError("Webcam not available")
 
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_WIDTH)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
-        print("[Camera] USB webcam initialized.")
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_WIDTH)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
+            print("[Camera] USB webcam initialized.")
+        except Exception as e:
+            ErrorHandler.handle_camera_error(
+                error=e,
+                context="USB webcam initialization",
+                logger=None,
+                raise_after=True  # Re-raise as this is critical
+            )
 
     def get_frames(self):
         """
@@ -62,7 +81,13 @@ class CameraManager:
         else:
             ret, frame = self.cap.read()
             if not ret:
-                raise RuntimeError("Could not read frame")
+                error = RuntimeError("Could not read frame")
+                ErrorHandler.handle_camera_error(
+                    error=error,
+                    context="Frame read",
+                    logger=None,
+                    raise_after=True
+                )
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             return frame, frame_rgb
 

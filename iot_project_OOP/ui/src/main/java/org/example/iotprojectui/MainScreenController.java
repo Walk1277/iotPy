@@ -1,10 +1,13 @@
 package org.example.iotprojectui;
 
 import javafx.application.Platform;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.util.Duration;
 import org.example.iotprojectui.controllers.StatusScreenController;
 import org.example.iotprojectui.controllers.ReportScreenController;
 import org.example.iotprojectui.controllers.AccidentScreenController;
@@ -41,8 +44,11 @@ public class MainScreenController {
     private Label accidentStatusLabel;
     private Label gSensorLabel;
     
-    // Response request modal
-    private ResponseRequestModal responseModal;
+    // Response request alert
+    private Alert responseAlert = null;
+    private boolean responseAlertShown = false;
+    private Timeline responseCountdownTimeline = null;
+    private String currentResponseMessage = "";
     
     public MainScreenController(BorderPane root) {
         this.mainContainer = new StackPane();
@@ -51,7 +57,7 @@ public class MainScreenController {
         // Initialize screen controllers
         this.statusScreenController = new StatusScreenController(this::showMainScreen);
         this.reportScreenController = new ReportScreenController(this::showMainScreen);
-        this.accidentScreenController = new AccidentScreenController(this::showMainScreen);
+        this.accidentScreenController = new AccidentScreenController(this::showMainScreen, this);
         this.updateScreenController = new UpdateScreenController(this::showMainScreen);
         this.settingsScreenController = new SettingsScreenController(this::showMainScreen);
         this.logScreenController = new LogScreenController(this::showMainScreen);
@@ -281,30 +287,108 @@ public class MainScreenController {
     
     public void showResponseRequestModal(String message, double remainingTime) {
         Platform.runLater(() -> {
-            System.out.println("[MainScreenController] showResponseRequestModal called - message: " + message + ", remaining: " + remainingTime);
-            // Remove existing modal if any
-            hideResponseRequestModal();
+            // Only show alert once per session (like speaker alert)
+            if (responseAlertShown) {
+                return;
+            }
             
-            // Create and show new modal
-            responseModal = new ResponseRequestModal(message, remainingTime, () -> {
-                // User responded - hide modal
-                hideResponseRequestModal();
-                // TODO: Send response to backend (could use a callback or file-based communication)
+            responseAlertShown = true;
+            currentResponseMessage = message;
+            
+            // Create Alert (like speaker alert)
+            responseAlert = new Alert(Alert.AlertType.WARNING);
+            responseAlert.setTitle("⚠️ Accident Detected!");
+            responseAlert.setHeaderText("ACCIDENT DETECTED!");
+            
+            // Create initial countdown message
+            int seconds = (int) Math.ceil(remainingTime);
+            String contentText = message + "\n\n" + 
+                                "Time remaining: " + seconds + " seconds\n\n" +
+                                "Click OK to cancel the emergency report.";
+            responseAlert.setContentText(contentText);
+            
+            // Set alert to be modal and always on top
+            if (mainContainer.getScene() != null) {
+                responseAlert.initOwner(mainContainer.getScene().getWindow());
+            }
+            
+            // Start countdown timer to update message
+            startResponseCountdown(remainingTime);
+            
+            // Show alert (use show() instead of showAndWait() to allow updates)
+            responseAlert.show();
+            
+            // Handle user response
+            responseAlert.setOnCloseRequest(e -> {
+                writeUserResponse();
+                stopResponseCountdown();
+                responseAlertShown = false;
+                responseAlert = null;
             });
             
-            // Add modal on top of everything
-            mainContainer.getChildren().add(responseModal);
-            System.out.println("[MainScreenController] Response modal added to container. Children count: " + mainContainer.getChildren().size());
+            // Also handle OK button click
+            responseAlert.getButtonTypes().setAll(ButtonType.OK);
+            javafx.scene.Node okButton = responseAlert.getDialogPane().lookupButton(ButtonType.OK);
+            if (okButton instanceof Button) {
+                ((Button) okButton).setOnAction(e -> {
+                    writeUserResponse();
+                    stopResponseCountdown();
+                    responseAlert.close();
+                    responseAlertShown = false;
+                    responseAlert = null;
+                });
+            }
         });
+    }
+    
+    private void startResponseCountdown(double initialTime) {
+        stopResponseCountdown(); // Stop any existing timer
+        
+        final double[] remaining = {initialTime};
+        
+        responseCountdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            remaining[0] -= 1.0;
+            if (remaining[0] <= 0) {
+                remaining[0] = 0;
+                stopResponseCountdown();
+                // Auto-report will be handled by backend
+                if (responseAlert != null) {
+                    Platform.runLater(() -> {
+                        responseAlert.close();
+                        responseAlertShown = false;
+                        responseAlert = null;
+                    });
+                }
+            } else {
+                // Update alert message with new countdown
+                if (responseAlert != null && responseAlert.getDialogPane() != null) {
+                    int seconds = (int) Math.ceil(remaining[0]);
+                    String contentText = currentResponseMessage + "\n\n" + 
+                                        "Time remaining: " + seconds + " seconds\n\n" +
+                                        "Click OK to cancel the emergency report.";
+                    responseAlert.setContentText(contentText);
+                }
+            }
+        }));
+        responseCountdownTimeline.setCycleCount(Timeline.INDEFINITE);
+        responseCountdownTimeline.play();
+    }
+    
+    private void stopResponseCountdown() {
+        if (responseCountdownTimeline != null) {
+            responseCountdownTimeline.stop();
+            responseCountdownTimeline = null;
+        }
     }
     
     public void updateResponseRequestModal(String message, double remainingTime) {
         Platform.runLater(() -> {
-            if (responseModal != null) {
-                responseModal.updateMessage(message);
-                responseModal.updateCountdown(remainingTime);
-            } else {
-                // Modal doesn't exist, create it
+            if (responseAlert != null && responseAlertShown) {
+                // Update message and restart countdown with new time
+                currentResponseMessage = message;
+                startResponseCountdown(remainingTime);
+            } else if (!responseAlertShown) {
+                // Alert doesn't exist, create it
                 showResponseRequestModal(message, remainingTime);
             }
         });
@@ -312,12 +396,17 @@ public class MainScreenController {
     
     public void hideResponseRequestModal() {
         Platform.runLater(() -> {
-            if (responseModal != null) {
-                responseModal.stop();
-                mainContainer.getChildren().remove(responseModal);
-                responseModal = null;
+            stopResponseCountdown();
+            if (responseAlert != null) {
+                responseAlert.close();
+                responseAlertShown = false;
+                responseAlert = null;
             }
         });
+    }
+    
+    public void resetResponseAlertFlag() {
+        responseAlertShown = false;
     }
     
     private boolean speakerAlertShown = false;
@@ -354,7 +443,7 @@ public class MainScreenController {
     }
     
     public boolean isResponseRequestModalActive() {
-        return responseModal != null;
+        return responseAlert != null;
     }
     
     public void hideSpeakerAlertIfShowing() {
@@ -363,12 +452,41 @@ public class MainScreenController {
             // But we can reset the flag so it won't show again
             // The alert will close when user clicks OK
             if (speakerAlertShown) {
-                System.out.println("[MainScreenController] Speaker alert is showing, but accident modal has higher priority");
                 // Note: JavaFX Alert.showAndWait() is blocking, so we can't close it programmatically
                 // The user will need to close it first, but we prevent new ones from showing
                 speakerAlertShown = true; // Keep flag true to prevent new alerts
             }
         });
+    }
+    
+    private void writeUserResponse() {
+        // Try multiple paths (Raspberry Pi and development)
+        String[] paths = {
+            "/home/pi/iot/data/user_response.json",
+            System.getProperty("user.dir") + "/../data/user_response.json",
+            System.getProperty("user.dir") + "/data/user_response.json",
+            "data/user_response.json"
+        };
+        
+        for (String path : paths) {
+            try {
+                java.nio.file.Files.createDirectories(java.nio.file.Paths.get(path).getParent());
+                
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.node.ObjectNode response = mapper.createObjectNode();
+                response.put("responded", true);
+                response.put("timestamp", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                
+                try (java.io.FileWriter writer = new java.io.FileWriter(path)) {
+                    writer.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response));
+                }
+                
+                break; // Success, exit loop
+            } catch (Exception e) {
+                // Try next path
+                continue;
+            }
+        }
     }
     
     private void writeStopSpeakerRequest() {
@@ -393,7 +511,6 @@ public class MainScreenController {
                     writer.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(stopRequest));
                 }
                 
-                System.out.println("[MainScreenController] Stop speaker request written to: " + path);
                 break; // Success, exit loop
             } catch (Exception e) {
                 // Try next path

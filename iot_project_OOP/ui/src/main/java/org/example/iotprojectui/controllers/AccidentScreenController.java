@@ -8,6 +8,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.example.iotprojectui.StatusDataLoader;
+import org.example.iotprojectui.MainScreenController;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -15,9 +16,11 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class AccidentScreenController implements BaseScreenController {
     private Runnable onBack;
+    private MainScreenController mainScreenController;
     
-    public AccidentScreenController(Runnable onBack) {
+    public AccidentScreenController(Runnable onBack, MainScreenController mainScreenController) {
         this.onBack = onBack;
+        this.mainScreenController = mainScreenController;
     }
     
     @Override
@@ -61,7 +64,26 @@ public class AccidentScreenController implements BaseScreenController {
             alert.showAndWait();
         });
         
-        content.getChildren().addAll(backBtn, title, accidentInfo, testBtn);
+        // Emergency Report Button - Triggers the actual emergency report popup
+        Button emergencyReportBtn = new Button("Trigger Emergency Report");
+        emergencyReportBtn.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 10px 20px;");
+        emergencyReportBtn.setOnAction(e -> {
+            if (mainScreenController != null) {
+                // Show the emergency report popup with 10 second countdown
+                mainScreenController.showResponseRequestModal(
+                    "Touch screen within 10 seconds to cancel report",
+                    10.0
+                );
+            } else {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Error");
+                alert.setHeaderText("Cannot trigger emergency report");
+                alert.setContentText("Main screen controller is not available.");
+                alert.showAndWait();
+            }
+        });
+        
+        content.getChildren().addAll(backBtn, title, accidentInfo, testBtn, emergencyReportBtn);
         detailScreen.setContent(content);
         detailScreen.setFitToWidth(true);
         

@@ -12,6 +12,12 @@ if project_root not in sys.path:
 
 from config import LEFT_EYE_IDXS, RIGHT_EYE_IDXS, CONSEC_FRAMES
 
+# Try both relative and absolute imports for Raspberry Pi compatibility
+try:
+    from ..config.config_manager import ConfigManager
+except ImportError:
+    from driver_monitor.config.config_manager import ConfigManager
+
 mp_facemesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
 denormalize_coordinates = mp_drawing._normalized_to_pixel_coordinates
@@ -31,17 +37,12 @@ class FatigueDetector:
     def _load_threshold(self):
         """Load EAR_THRESHOLD from config.py dynamically."""
         try:
-            import config
-            importlib.reload(config)  # Reload config to get latest values
-            self.ear_threshold = config.EAR_THRESHOLD
+            config_manager = ConfigManager()
+            self.ear_threshold = config_manager.get('EAR_THRESHOLD', 0.4)
         except Exception as e:
             # Fallback to default if reload fails
-            print(f"[FatigueDetector] Warning: Could not reload config: {e}")
-            try:
-                import config
-                self.ear_threshold = config.EAR_THRESHOLD
-            except:
-                self.ear_threshold = 0.4  # Default fallback
+            print(f"[FatigueDetector] Warning: Could not load config: {e}")
+            self.ear_threshold = 0.4  # Default fallback
 
     def _distance(self, p1, p2):
         return ((p1[0]-p2[0]) ** 2 + (p1[1]-p2[1]) ** 2) ** 0.5

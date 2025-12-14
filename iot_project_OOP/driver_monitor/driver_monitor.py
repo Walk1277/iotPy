@@ -3,7 +3,6 @@ import cv2
 import datetime
 import sys
 import os
-import importlib
 
 # Add project root to Python path (Raspberry Pi compatibility)
 # May already be added by main.py, but prepare for direct execution
@@ -24,6 +23,11 @@ try:
     from .logging_system.log_parser import LogParser
     from .report.report_manager import ReportManager
     from .data_bridge import DataBridge
+    from .state.drowsiness_state import DrowsinessState
+    from .config.config_manager import ConfigManager
+    from .processing.frame_processor import FrameProcessor
+    from .utils.path_manager import PathManager
+    from .utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
 except ImportError:
     # Absolute import (when executed directly)
     from driver_monitor.camera.camera_manager import CameraManager
@@ -36,55 +40,137 @@ except ImportError:
     from driver_monitor.logging_system.log_parser import LogParser
     from driver_monitor.report.report_manager import ReportManager
     from driver_monitor.data_bridge import DataBridge
+    from driver_monitor.state.drowsiness_state import DrowsinessState
+    from driver_monitor.config.config_manager import ConfigManager
+    from driver_monitor.processing.frame_processor import FrameProcessor
+    from driver_monitor.utils.path_manager import PathManager
+    from driver_monitor.utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
 
-# Use absolute import for config at project root
-# Note: EAR_THRESHOLD is now loaded dynamically in FatigueDetector
+# Use absolute import for config at project root (for backward compatibility)
+# Note: ConfigManager should be used instead of direct config import
 import config
 
 
 class DriverMonitor:
     def __init__(self, cam_index=0):
+        # #region agent log
+        import json
+        try:
+            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"location":"driver_monitor.py:53","message":"DriverMonitor.__init__ entry","data":{"cam_index":cam_index},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
+        except: pass
+        # #endregion
+        
         self.cam_index = cam_index
-
-        self.camera = CameraManager(cam_index)
-        self.fatigue = FatigueDetector()
-        self.accel = AccelerometerDetector()
-        # Use GPS_ENABLED from config to determine if GPS should be simulated
-        import importlib
-        importlib.reload(config)
-        gps_simulate = not config.GPS_ENABLED  # If GPS_ENABLED is False, use simulation
-        self.gps = GPSManager(simulate=gps_simulate)
-        self.speaker = SpeakerController()
-        self.overlay = OverlayRenderer()
-        self.logger = EventLogger()
-        self.report_manager = ReportManager(logger=self.logger, gps_manager=self.gps)
-        self.data_bridge = DataBridge()  # For UI communication
+        
+        # Initialize config manager (singleton)
+        # #region agent log
+        try:
+            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"location":"driver_monitor.py:60","message":"Before ConfigManager init","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + '\n')
+        except: pass
+        # #endregion
+        self.config_manager = ConfigManager()
+        # #region agent log
+        try:
+            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"location":"driver_monitor.py:62","message":"After ConfigManager init","data":{"config_manager_exists":self.config_manager is not None},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + '\n')
+        except: pass
+        # #endregion
+        
+        # Initialize components
+        # #region agent log
+        try:
+            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"location":"driver_monitor.py:66","message":"Before component initialization","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
+        except: pass
+        # #endregion
+        try:
+            self.camera = CameraManager(cam_index)
+            self.fatigue = FatigueDetector()
+            self.accel = AccelerometerDetector()
+            
+            # Use GPS_ENABLED from config to determine if GPS should be simulated
+            gps_simulate = not self.config_manager.get('GPS_ENABLED', True)
+            self.gps = GPSManager(simulate=gps_simulate)
+            self.speaker = SpeakerController()
+            self.overlay = OverlayRenderer()
+            self.logger = EventLogger()
+            self.report_manager = ReportManager(logger=self.logger, gps_manager=self.gps)
+            self.data_bridge = DataBridge()  # For UI communication
+            
+            # Initialize state managers and processors
+            self.drowsiness_state = DrowsinessState(logger=self.logger, config_manager=self.config_manager)
+            self.frame_processor = FrameProcessor(overlay_renderer=self.overlay)
+        except Exception as e:
+            # #region agent log
+            try:
+                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"location":"driver_monitor.py:85","message":"Component init error","data":{"error_type":type(e).__name__,"error_msg":str(e)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
+            except: pass
+            # #endregion
+            raise
 
         self.running = True
+        # #region agent log
+        try:
+            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"location":"driver_monitor.py:90","message":"DriverMonitor.__init__ exit","data":{"running":self.running},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
+        except: pass
+        # #endregion
 
     def initialize(self):
         """Initialize all components."""
-        self.camera.initialize()
+        # #region agent log
+        import json
+        try:
+            with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"location":"driver_monitor.py:95","message":"DriverMonitor.initialize entry","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
+        except: pass
+        # #endregion
+        
+        try:
+            # #region agent log
+            try:
+                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"location":"driver_monitor.py:100","message":"Before camera.initialize","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
+            except: pass
+            # #endregion
+            self.camera.initialize()
+            # #region agent log
+            try:
+                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"location":"driver_monitor.py:104","message":"After camera.initialize","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
+            except: pass
+            # #endregion
 
-        # ADXL345
-        self.accel.initialize()
+            # ADXL345
+            self.accel.initialize()
 
-        # GPS
-        self.gps.initialize()
+            # GPS
+            self.gps.initialize()
 
-        # Speaker
-        self.speaker.initialize()
+            # Speaker
+            self.speaker.initialize()
 
-        self.logger.log("Start program")
+            self.logger.log("Start program")
+            # #region agent log
+            try:
+                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"location":"driver_monitor.py:118","message":"DriverMonitor.initialize exit","data":{},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
+            except: pass
+            # #endregion
+        except Exception as e:
+            # #region agent log
+            try:
+                with open('/home/mingyeongmin/문서/development/pythonproject/iotPy/iot_project_OOP/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"location":"driver_monitor.py:121","message":"Initialize error","data":{"error_type":type(e).__name__,"error_msg":str(e)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}) + '\n')
+            except: pass
+            # #endregion
+            raise
 
     def run(self):
-
         self.initialize()
-
-        alarm_on = False
-        prev_alarm_on = False
-        alarm_start_time = None  # Track when alarm started
-        no_face_start_time = None  # Track when no face detected while driving started
         
         # Track last registered impact to prevent duplicate registrations
         last_registered_impact_time = None
@@ -103,8 +189,16 @@ class DriverMonitor:
             try:
                 frame, frame_rgb = self.camera.get_frames()
             except (RuntimeError, Exception) as e:
-                print(f"Camera read error: {e}. Stop.")
-                break
+                error_info = ErrorHandler.handle_camera_error(
+                    error=e,
+                    context="Frame capture",
+                    logger=self.logger
+                )
+                if not error_info['can_continue']:
+                    print("[DriverMonitor] Camera error is critical. Stopping.")
+                    break
+                # Try to continue with next frame
+                continue
 
             imgH, imgW = frame.shape[:2]
 
@@ -131,81 +225,36 @@ class DriverMonitor:
             is_driving = False
             if gps_data and len(gps_data) >= 4:
                 gps_speed = gps_data[3]  # speed in km/h
-                importlib.reload(config)
-                speed_threshold = getattr(config, 'DRIVING_SPEED_THRESHOLD', 5.0)
+                speed_threshold = self.config_manager.get('DRIVING_SPEED_THRESHOLD', 5.0)
                 is_driving = gps_speed >= speed_threshold
             
-            # Determine if speaker should be active
-            # Speaker should be active when:
-            # 1. Driving AND (drowsiness detected OR no face for 10+ seconds)
-            # 2. Not driving: do NOT activate speaker (parked state)
-            should_activate_speaker = False
-            no_face_duration = 0.0
-            
-            if is_driving:
-                # When driving: check conditions
-                if alarm_on:
-                    # Drowsiness detected while driving - activate speaker immediately
-                    should_activate_speaker = True
-                    no_face_start_time = None  # Reset no face timer
-                elif not face_detected:
-                    # No face detected while driving - start timer
-                    if no_face_start_time is None:
-                        no_face_start_time = datetime.datetime.now()
-                    
-                    # Calculate how long no face has been detected
-                    no_face_duration = (datetime.datetime.now() - no_face_start_time).total_seconds()
-                    importlib.reload(config)
-                    timeout = getattr(config, 'NO_FACE_WHILE_DRIVING_TIMEOUT', 10.0)
-                    
-                    # Activate speaker only after timeout
-                    if no_face_duration >= timeout:
-                        should_activate_speaker = True
-                else:
-                    # Face detected - reset no face timer
-                    no_face_start_time = None
-            else:
-                # When not driving: do NOT activate speaker
-                # Even if drowsiness detected or no face, only show alert in UI
-                should_activate_speaker = False
-                no_face_start_time = None  # Reset timer when not driving
-            
-            # Check if alarm state changed (from off to on)
-            if should_activate_speaker and not prev_alarm_on:
-                # Alarm just turned on - log the event
-                if alarm_on:
-                    self.logger.log("drowsiness")
-                    print(f"[DriverMonitor] Drowsiness detected and logged. EAR: {ear:.3f}")
-                elif not face_detected and is_driving:
-                    self.logger.log("no_face_while_driving")
-                    print(f"[DriverMonitor] No face detected for {no_face_duration:.1f}s while driving (Speed: {gps_speed:.1f} km/h)")
-                alarm_start_time = datetime.datetime.now()
+            # Update drowsiness state (handles all state management logic)
+            state_info = self.drowsiness_state.update(
+                face_detected=face_detected,
+                alarm_on=alarm_on,
+                is_driving=is_driving,
+                gps_speed=gps_speed
+            )
+            should_activate_speaker = state_info['should_activate_speaker']
+            alarm_duration = state_info['alarm_duration']
+            show_speaker_popup = state_info['show_speaker_popup']
+            no_face_duration = state_info['no_face_duration']
             
             # Check for UI request to stop speaker
             stop_speaker_request = self._check_stop_speaker_request()
             if stop_speaker_request:
-                self.speaker.alarm_off()
-                should_activate_speaker = False
-                alarm_start_time = None
-                print("[DriverMonitor] Speaker stopped by UI request")
+                was_active = self.drowsiness_state.handle_stop_speaker_request()
+                if was_active:
+                    self.speaker.alarm_off()
+                    should_activate_speaker = False
+                    print("[DriverMonitor] Speaker stopped by UI request")
             
-            # Calculate alarm duration and check if popup should be shown
-            alarm_duration = 0.0
-            show_speaker_popup = False
+            # Control speaker based on state
             if should_activate_speaker and not stop_speaker_request:
-                if alarm_start_time:
-                    alarm_duration = (datetime.datetime.now() - alarm_start_time).total_seconds()
-                    if alarm_duration >= 1.0:
-                        show_speaker_popup = True
                 self.speaker.alarm_on()
             else:
-                if prev_alarm_on:
+                if self.drowsiness_state.prev_alarm_on:
                     self.speaker.alarm_off()
-                if not should_activate_speaker:
-                    alarm_start_time = None
-            
-            # Update prev_alarm_on AFTER checking state change
-            prev_alarm_on = should_activate_speaker
             
             # Update UI data bridge (after calculating alarm_duration and show_speaker_popup)
             # For UI: show alarm_on based on actual drowsiness detection (not just speaker state)
@@ -220,30 +269,8 @@ class DriverMonitor:
             )
 
             # =========================================
-            # 4) Frame overlay rendering
+            # 4) Frame overlay rendering (will be done later after report status)
             # =========================================
-            if face_detected:
-                frame = self.overlay.put_text(
-                    frame, f"EAR: {ear:.2f}", (10, 30), (0, 255, 0)
-                )
-                frame = self.overlay.draw_eye_landmarks(frame, left_pts, right_pts, (0, 255, 255))
-
-                if alarm_on:
-                    text = "X"
-                    (tw, th), baseline = cv2.getTextSize(
-                        text,
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        3.0, 5
-                    )
-                    cx = (imgW - tw) // 2
-                    cy = (imgH + th) // 2
-                    cv2.putText(
-                        frame, text, (cx, cy),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        3.0, (0, 0, 255), 5
-                    )
-            else:
-                frame = self.overlay.put_text(frame, "no face", (10, 30), (0, 0, 255))
 
             # =========================================
             # 5) Accelerometer reading
@@ -270,16 +297,6 @@ class DriverMonitor:
                         # Same impact already registered, skip
                         pass
 
-                # Display accelerometer event text for 3 seconds
-                if (datetime.datetime.now() - accel_event_time).total_seconds() < 3:
-                    frame = self.overlay.put_text(
-                        frame,
-                        accel_event_text,
-                        (10, imgH - 30),
-                        (0, 255, 255),
-                        scale=0.7
-                    )
-
             # =========================================
             # 5.5) GPS position extraction (reuse data read above)
             # =========================================
@@ -297,8 +314,7 @@ class DriverMonitor:
             # Update report manager (initial check without keyboard input)
             # Pass EAR and threshold for eyes closed detection
             # Get current threshold from config (supports runtime updates)
-            importlib.reload(config)
-            current_threshold = config.EAR_THRESHOLD
+            current_threshold = self.config_manager.get('EAR_THRESHOLD', 0.2)
             
             # Use UI response if available, otherwise use keyboard input
             user_input = ui_response if ui_response is not None else None
@@ -332,87 +348,55 @@ class DriverMonitor:
             if self._frame_count % 60 == 0:
                 self.data_bridge.update_log_summary()
             
-            # Handle report system alerts (accident detection)
-            # Note: Do NOT activate speaker for accident detection - only show UI popup
-            if report_status['status'] == 'ALERT':
-                # Show alert message on screen (if window is displayed)
-                message = report_status['message']
-                remaining = report_status['remaining_time']
-                
-                # Display message on screen (only if monitor window is shown)
-                if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
-                    frame = self.overlay.put_text(
-                        frame,
-                        message,
-                        (10, imgH // 2),
-                        (0, 0, 255),
-                        scale=1.2
-                    )
-                    frame = self.overlay.put_text(
-                        frame,
-                        f"Time remaining: {remaining:.1f}s",
-                        (10, imgH // 2 + 40),
-                        (255, 0, 0),
-                        scale=1.0
-                    )
-                
-                # Do NOT activate speaker for accident detection
-                # UI popup will be shown instead
-                
-            elif report_status['status'] == 'REPORTING':
-                # Report process initiated
-                if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
-                    frame = self.overlay.put_text(
-                        frame,
-                        "!!! REPORT PROCESS INITIATED !!!",
-                        (10, imgH // 2),
-                        (0, 0, 255),
-                        scale=1.5
-                    )
-                
-                # Do NOT activate speaker for accident reporting
-                # SMS has been sent, no need for speaker
-                
-            elif report_status['status'] == 'NORMAL':
-                # Normal state - no action needed for speaker
-                pass
-
+            # =========================================
+            # 6) Frame processing and overlay rendering
+            # =========================================
+            # Process frame with all overlays
+            frame = self.frame_processor.process_frame(
+                frame=frame,
+                frame_rgb=frame_rgb,
+                face_detected=face_detected,
+                ear=ear,
+                left_pts=left_pts,
+                right_pts=right_pts,
+                alarm_on=alarm_on,
+                accel_event_text=accel_event_text,
+                accel_event_time=accel_event_time,
+                report_status=report_status
+            )
+            
             # ============================
-            # 6) Display and keyboard input
+            # 7) Display and keyboard input
             # ============================
-            # Only show window if SHOW_MONITOR_WINDOW environment variable is set
-            # On Raspberry Pi, UI is shown separately, so we don't need this window
-            if os.environ.get('SHOW_MONITOR_WINDOW', '').lower() in ('1', 'true', 'yes'):
-                cv2.imshow("Drowsiness Monitor", frame)
-                key = cv2.waitKey(1) & 0xFF
-            else:
-                # No window display - just process keyboard input from stdin if available
-                key = 0
+            key = self.frame_processor.display_frame(frame)
 
             # Handle UI response and keyboard input for report system
             # Check UI response first (touch screen), then keyboard
+            # Only process response if status is ALERT (not REPORTING - report already sent)
             ui_response = self._check_ui_response()
-            if ui_response is not None and report_status['status'] == 'ALERT':
-                # Get current threshold from config (supports runtime updates)
-                importlib.reload(config)
-                current_threshold = config.EAR_THRESHOLD
-                
-                report_status = self.report_manager.update(
-                    face_detected=face_detected,
-                    ear=ear if face_detected else None,
-                    ear_threshold=current_threshold,
-                    keyboard_input=ui_response
-                )
-                if report_status['status'] == 'NORMAL':
-                    self.speaker.alarm_off()
-                    print(f"[Report] User responded via UI. Report cancelled.")
+            if ui_response is not None:
+                if report_status['status'] == 'ALERT':
+                    # Get current threshold from config (supports runtime updates)
+                    current_threshold = self.config_manager.get('EAR_THRESHOLD', 0.2)
+                    
+                    report_status = self.report_manager.update(
+                        face_detected=face_detected,
+                        ear=ear if face_detected else None,
+                        ear_threshold=current_threshold,
+                        keyboard_input=ui_response
+                    )
+                    if report_status['status'] == 'NORMAL':
+                        self.speaker.alarm_off()
+                        print(f"[Report] User responded via UI. Report cancelled.")
+                elif report_status['status'] == 'REPORTING':
+                    # Report already sent, ignore response
+                    print(f"[Report] Report already sent. User response ignored.")
             elif report_status['status'] == 'ALERT' and key != 255 and key != 0:
                 # Any key pressed during alert cancels report
                 keyboard_input = chr(key) if key != 255 and key != 0 else None
                 if keyboard_input:
                     # Get current threshold from config (supports runtime updates)
-                    importlib.reload(config)
-                    current_threshold = config.EAR_THRESHOLD
+                    current_threshold = self.config_manager.get('EAR_THRESHOLD', 0.2)
                     
                     report_status = self.report_manager.update(
                         face_detected=face_detected,
@@ -448,7 +432,7 @@ class DriverMonitor:
         
         # Try multiple paths (Raspberry Pi and development)
         paths = [
-            "/home/pi/iot/data/user_response.json",
+            PathManager.get_user_response_json_path(),
             os.path.join(project_root, "data", "user_response.json"),
             os.path.join(self.data_bridge.get_data_path(), "user_response.json")
         ]
@@ -483,7 +467,7 @@ class DriverMonitor:
         
         # Try multiple paths (Raspberry Pi and development)
         paths = [
-            "/home/pi/iot/data/stop_speaker.json",
+            PathManager.get_stop_speaker_json_path(),
             os.path.join(project_root, "data", "stop_speaker.json"),
             os.path.join(self.data_bridge.get_data_path(), "stop_speaker.json")
         ]

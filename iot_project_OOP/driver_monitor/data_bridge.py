@@ -16,6 +16,16 @@ if project_root not in sys.path:
 from config import LOG_FILE
 import importlib
 
+# Try both relative and absolute imports for Raspberry Pi compatibility
+try:
+    from ..config.config_manager import ConfigManager
+    from ..utils.path_manager import PathManager
+    from ..utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
+except ImportError:
+    from driver_monitor.config.config_manager import ConfigManager
+    from driver_monitor.utils.path_manager import PathManager
+    from driver_monitor.utils.error_handler import ErrorHandler, ErrorType, ErrorSeverity
+
 
 class DataBridge:
     """
@@ -26,35 +36,19 @@ class DataBridge:
     def __init__(self, data_dir=None):
         """
         Args:
-            data_dir: Directory to store JSON files (default: project_root/data)
-                     On Raspberry Pi, can be set to /home/pi/iot/data for UI access
+            data_dir: Directory to store JSON files (optional, uses PathManager if None)
         """
         if data_dir is None:
-            # Try Raspberry Pi default path first, then fallback to project root
-            rpi_path = "/home/pi/iot/data"
-            if os.path.exists("/home/pi") and os.path.isdir("/home/pi"):
-                data_dir = rpi_path
-            else:
-                data_dir = os.path.join(project_root, "data")
+            data_dir = PathManager.ensure_data_dir()
+        else:
+            os.makedirs(data_dir, exist_ok=True)
         
         self.data_dir = data_dir
-        self.drowsiness_json_path = os.path.join(data_dir, "drowsiness.json")
-        self.status_json_path = os.path.join(data_dir, "status.json")
-        self.log_summary_json_path = os.path.join(data_dir, "log_summary.json")
+        self.drowsiness_json_path = PathManager.get_drowsiness_json_path()
+        self.status_json_path = PathManager.get_status_json_path()
+        self.log_summary_json_path = PathManager.get_log_summary_json_path()
         
-        # Create data directory if it doesn't exist
-        try:
-            os.makedirs(data_dir, exist_ok=True)
-            print(f"[DataBridge] Using data directory: {data_dir}")
-        except PermissionError:
-            # Fallback to project root if permission denied
-            fallback_dir = os.path.join(project_root, "data")
-            self.data_dir = fallback_dir
-            self.drowsiness_json_path = os.path.join(fallback_dir, "drowsiness.json")
-            self.status_json_path = os.path.join(fallback_dir, "status.json")
-            self.log_summary_json_path = os.path.join(fallback_dir, "log_summary.json")
-            os.makedirs(fallback_dir, exist_ok=True)
-            print(f"[DataBridge] Permission denied, using fallback: {fallback_dir}")
+        print(f"[DataBridge] Using data directory: {data_dir}")
     
     def update_drowsiness_status(self, ear=None, face_detected=False, alarm_on=False, state=None, alarm_duration=0.0, show_speaker_popup=False):
         """
@@ -77,9 +71,8 @@ class DataBridge:
                 state = "no_face"
         
         # Load current threshold dynamically
-        import config
-        importlib.reload(config)
-        current_threshold = config.EAR_THRESHOLD
+        config_manager = ConfigManager()
+        current_threshold = config_manager.get('EAR_THRESHOLD', 0.2)
         
         data = {
             "ear": ear if ear is not None else 0.0,
@@ -242,7 +235,12 @@ class DataBridge:
             self._write_json(self.log_summary_json_path, summary)
             
         except Exception as e:
-            print(f"[DataBridge] Error updating log summary: {e}")
+            ErrorHandler.handle_file_error(
+                error=e,
+                file_path="log_summary.json",
+                operation="update",
+                logger=None
+            )
     
     def _write_json(self, filepath, data):
         """Write data to JSON file atomically."""
@@ -258,7 +256,12 @@ class DataBridge:
             os.rename(temp_path, filepath)
             
         except Exception as e:
-            print(f"[DataBridge] Error writing JSON: {e}")
+            ErrorHandler.handle_file_error(
+                error=e,
+                file_path=filepath,
+                operation="write",
+                logger=None
+            )
     
     def get_data_path(self):
         """Get the data directory path."""

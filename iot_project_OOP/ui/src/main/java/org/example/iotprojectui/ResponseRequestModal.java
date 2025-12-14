@@ -29,44 +29,57 @@ public class ResponseRequestModal extends StackPane {
     public ResponseRequestModal(String message, double remainingTime, Runnable onResponse) {
         this.onResponse = onResponse;
         
-        // Create full-screen overlay
-        setStyle("-fx-background-color: rgba(0, 0, 0, 0.9);");
-        setPrefSize(800, 440);
+        // Remove overlay background - make it transparent
+        setStyle("-fx-background-color: transparent;");
+        setAlignment(Pos.CENTER);  // Center the modal content
         
-        VBox content = new VBox(30);
+        // Create modal content box (400x300 size, centered, eye-catching colors)
+        VBox modalBox = new VBox(20);
+        modalBox.setAlignment(Pos.CENTER);
+        modalBox.setPadding(new Insets(25));
+        // Eye-catching style: bright red background with white border
+        modalBox.setStyle("-fx-background-color: #ff1a1a; -fx-background-radius: 15; -fx-border-color: #ffffff; -fx-border-width: 4; -fx-border-radius: 15;");
+        modalBox.setMaxWidth(400);
+        modalBox.setMaxHeight(300);
+        modalBox.setPrefWidth(400);
+        modalBox.setPrefHeight(300);
+        modalBox.setMinWidth(400);
+        modalBox.setMinHeight(300);
+        
+        VBox content = new VBox(15);
         content.setAlignment(Pos.CENTER);
-        content.setPadding(new Insets(40));
+        content.setPadding(new Insets(15));
         
-        // Warning icon (text-based)
+        // Warning icon
         Label warningIcon = new Label("⚠️");
-        warningIcon.setStyle("-fx-font-size: 80px;");
+        warningIcon.setStyle("-fx-font-size: 45px;");
         
-        // Title
+        // Title - white text on red background for contrast
         Label titleLabel = new Label("ACCIDENT DETECTED!");
-        titleLabel.setStyle("-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #ff4444;");
+        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
         
-        // Message
+        // Message - white text
         messageLabel = new Label(message);
-        messageLabel.setStyle("-fx-font-size: 24px; -fx-text-fill: #ffffff; -fx-wrap-text: true;");
-        messageLabel.setMaxWidth(700);
+        messageLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #ffffff; -fx-wrap-text: true;");
+        messageLabel.setMaxWidth(320);
         messageLabel.setAlignment(Pos.CENTER);
         
-        // Countdown
+        // Countdown - yellow for visibility
         countdownLabel = new Label();
-        countdownLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #ffaa00;");
+        countdownLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #ffff00;");
         updateCountdown(remainingTime);
         
-        // Instruction
-        Label instructionLabel = new Label("TOUCH THE SCREEN TO CANCEL REPORT");
-        instructionLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+        // Instruction - white text
+        Label instructionLabel = new Label("TOUCH TO CANCEL");
+        instructionLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
         
         content.getChildren().addAll(warningIcon, titleLabel, messageLabel, countdownLabel, instructionLabel);
+        modalBox.getChildren().add(content);
         
-        getChildren().add(content);
+        getChildren().add(modalBox);
         
-        // Make entire modal clickable
-        setOnMouseClicked(e -> {
-            // Write response to file for backend to read
+        // Make modal box clickable
+        modalBox.setOnMouseClicked(e -> {
             writeUserResponse();
             if (onResponse != null) {
                 onResponse.run();
@@ -101,11 +114,11 @@ public class ResponseRequestModal extends StackPane {
             
             // Change color based on remaining time
             if (remainingTime <= 3) {
-                countdownLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #ff0000;");
+                countdownLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");  // White when urgent
             } else if (remainingTime <= 5) {
-                countdownLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #ff8800;");
+                countdownLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #ffaa00;");  // Orange
             } else {
-                countdownLabel.setStyle("-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #ffaa00;");
+                countdownLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #ffff00;");  // Yellow
             }
         }
     }
