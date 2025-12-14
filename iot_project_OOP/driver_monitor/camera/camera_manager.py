@@ -33,26 +33,31 @@ class CameraManager:
 
     def initialize(self):
         """
-        Initialize camera with priority: USB webcam first, then CSI camera (PiCamera2).
+        Initialize camera with USB webcam priority.
         
         Priority order:
-        1. USB webcam (if available)
-        2. CSI camera (PiCamera2) - only on Raspberry Pi if USB webcam fails
+        1. USB webcam (always tried first)
+        2. CSI camera (PiCamera2) - only on Raspberry Pi if USB webcam is not available at all
+        
+        Note: USB webcam is always preferred. CSI camera is only used as fallback
+        if USB webcam cannot be detected/initialized.
         """
-        # Try USB webcam first
+        # Always try USB webcam first (highest priority)
+        print(f"[Camera] Attempting to initialize USB webcam (index: {self.index})...")
         usb_success = False
+        
         try:
-            print(f"[Camera] Attempting to initialize USB webcam (index: {self.index})...")
             self._init_usb_cam()
             usb_success = True
-            print("[Camera] USB webcam initialized successfully.")
+            print("[Camera] USB webcam initialized successfully (USB camera has priority).")
         except Exception as e:
             print(f"[Camera] USB webcam initialization failed: {e}")
-            print("[Camera] Will try CSI camera (PiCamera2) if available...")
             usb_success = False
         
-        # If USB webcam failed and we're on Raspberry Pi, try CSI camera
+        # Only try CSI camera if USB webcam completely failed AND we're on Raspberry Pi
+        # This ensures USB webcam always has priority
         if not usb_success and IS_RPI:
+            print("[Camera] USB webcam not available. Falling back to CSI camera (PiCamera2)...")
             try:
                 print("[Camera] Attempting to initialize CSI camera (PiCamera2)...")
                 self.picam2 = Picamera2()
@@ -61,7 +66,7 @@ class CameraManager:
                 self.picam2.preview_configuration.align()
                 self.picam2.configure("preview")
                 self.picam2.start()
-                print("[Camera] PiCamera2 (CSI camera) initialized successfully.")
+                print("[Camera] PiCamera2 (CSI camera) initialized as fallback.")
             except Exception as e:
                 ErrorHandler.handle_camera_error(
                     error=e,
@@ -69,11 +74,9 @@ class CameraManager:
                     logger=None
                 )
                 print("[Camera] CSI camera initialization also failed.")
-                # Both USB and CSI failed, raise the error
-                if not usb_success:
-                    raise RuntimeError("Both USB webcam and CSI camera initialization failed.")
+                raise RuntimeError("Both USB webcam and CSI camera initialization failed.")
         elif not usb_success:
-            # Not on Raspberry Pi and USB failed
+            # Not on Raspberry Pi and USB failed - no CSI fallback available
             raise RuntimeError("USB webcam initialization failed and CSI camera is not available (not on Raspberry Pi).")
 
     def _init_usb_cam(self, index=None):
