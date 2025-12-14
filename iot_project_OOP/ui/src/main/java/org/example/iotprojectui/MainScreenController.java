@@ -41,8 +41,8 @@ public class MainScreenController {
     private Label accidentStatusLabel;
     private Label gSensorLabel;
     
-    // Response request modal
-    private ResponseRequestModal responseModal;
+    // Response request modal (using Alert like speaker popup)
+    private boolean responseAlertShown = false;
     
     public MainScreenController(BorderPane root) {
         this.mainContainer = new StackPane();
@@ -281,41 +281,64 @@ public class MainScreenController {
     
     public void showResponseRequestModal(String message, double remainingTime) {
         Platform.runLater(() -> {
+            // Only show alert once per accident session (like speaker popup)
+            if (responseAlertShown) {
+                return;
+            }
+            
             System.out.println("[MainScreenController] showResponseRequestModal called - message: " + message + ", remaining: " + remainingTime);
-            // Remove existing modal if any
-            hideResponseRequestModal();
             
-            // Create and show new modal
-            responseModal = new ResponseRequestModal(message, remainingTime, () -> {
-                // User responded - hide modal
-                hideResponseRequestModal();
-                // TODO: Send response to backend (could use a callback or file-based communication)
+            responseAlertShown = true;
+            
+            // Create Alert dialog (like speaker popup)
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("ACCIDENT DETECTED!");
+            alert.setHeaderText("⚠️ 사고가 감지되었습니다!");
+            
+            int seconds = (int) Math.ceil(remainingTime);
+            String contentText = message + "\n\n" +
+                    "남은 시간: " + seconds + "초\n\n" +
+                    "리포트를 취소하려면 '리포트 취소' 버튼을 클릭하세요.";
+            alert.setContentText(contentText);
+            
+            // Add Cancel Report button
+            ButtonType cancelReportButton = new ButtonType("리포트 취소", ButtonBar.ButtonData.CANCEL_CLOSE);
+            alert.getButtonTypes().setAll(cancelReportButton, ButtonType.CLOSE);
+            
+            // Set alert to be modal and always on top
+            alert.initOwner(mainContainer.getScene().getWindow());
+            
+            // Show alert and wait for user response
+            alert.showAndWait().ifPresent(response -> {
+                if (response == cancelReportButton) {
+                    // User clicked "Cancel Report" - write response to file
+                    writeUserResponse();
+                    System.out.println("[MainScreenController] User cancelled report");
+                }
+                responseAlertShown = false;
             });
-            
-            // Add modal on top of everything
-            mainContainer.getChildren().add(responseModal);
-            System.out.println("[MainScreenController] Response modal added to container. Children count: " + mainContainer.getChildren().size());
         });
     }
     
     public void updateResponseRequestModal(String message, double remainingTime) {
         Platform.runLater(() -> {
-            if (responseModal != null) {
-                responseModal.updateMessage(message);
-                responseModal.updateCountdown(remainingTime);
-            } else {
-                // Modal doesn't exist, create it
+            // If alert is already showing, we can't update it easily
+            // But we can show it if it's not showing yet
+            if (!responseAlertShown) {
                 showResponseRequestModal(message, remainingTime);
             }
+            // Note: JavaFX Alert.showAndWait() is blocking, so we can't update it programmatically
+            // The alert will stay open until user responds
         });
     }
     
     public void hideResponseRequestModal() {
         Platform.runLater(() -> {
-            if (responseModal != null) {
-                responseModal.stop();
-                mainContainer.getChildren().remove(responseModal);
-                responseModal = null;
+            // Don't force close the alert - let user respond
+            // Just reset the flag so a new one can be shown if needed
+            // The alert will close when user clicks a button
+            if (responseAlertShown) {
+                System.out.println("[MainScreenController] Response alert is showing - waiting for user response");
             }
         });
     }
@@ -354,7 +377,38 @@ public class MainScreenController {
     }
     
     public boolean isResponseRequestModalActive() {
-        return responseModal != null;
+        return responseAlertShown;
+    }
+    
+    private void writeUserResponse() {
+        // Try multiple paths (Raspberry Pi and development)
+        String[] paths = {
+            "/home/pi/iot/data/user_response.json",
+            System.getProperty("user.dir") + "/../data/user_response.json",
+            System.getProperty("user.dir") + "/data/user_response.json",
+            "data/user_response.json"
+        };
+        
+        for (String path : paths) {
+            try {
+                java.nio.file.Files.createDirectories(java.nio.file.Paths.get(path).getParent());
+                
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.node.ObjectNode response = mapper.createObjectNode();
+                response.put("responded", true);
+                response.put("timestamp", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                
+                try (java.io.FileWriter writer = new java.io.FileWriter(path)) {
+                    writer.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response));
+                }
+                
+                System.out.println("[MainScreenController] User response written to: " + path);
+                break; // Success, exit loop
+            } catch (Exception e) {
+                // Try next path
+                continue;
+            }
+        }
     }
     
     public void hideSpeakerAlertIfShowing() {

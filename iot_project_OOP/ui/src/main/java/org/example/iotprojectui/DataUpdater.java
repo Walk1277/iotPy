@@ -113,9 +113,9 @@ public class DataUpdater {
             mainScreenController.updateResponseRequestModal(message, remainingTime);
             mainScreenController.updateAccidentStatus("Response Required!", "#ff5722");
         } else {
-            // Hide modal if it exists
-            mainScreenController.hideResponseRequestModal();
-            
+            // Don't force close the alert - let user respond
+            // The alert will close when user clicks a button (like speaker popup)
+            // Just update the status label
             if (impactDetected) {
                 mainScreenController.updateAccidentStatus("Accident Detected!", "#d32f2f");
             } else {
